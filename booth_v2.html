@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Findy AI+ ／ ブースデモ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap');
+  :root {
+    --ink:#0a1f2e; --ink-soft:#41606f; --paper:#f4f1ea; --card:#fff;
+    --line:#e3ddd0; --teal:#0c7d6e; --teal-deep:#095c51; --coral:#e2603f; --gold:#c79a36;
+    --shadow:0 1px 2px rgba(10,31,46,.04),0 8px 24px rgba(10,31,46,.06);
+    --code-bg:#f6f8fa; --md-border:#d1d9e0;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:"Zen Kaku Gothic New",sans-serif; color:var(--ink); background:var(--paper);
+    background-image:radial-gradient(circle at 12% 8%,rgba(12,125,110,.05),transparent 40%),radial-gradient(circle at 88% 0%,rgba(226,96,63,.05),transparent 38%);
+    line-height:1.65; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:940px; margin:0 auto; padding:0 20px; }
+
+  /* ===== メインナビ ===== */
+  .topbar { position:sticky; top:0; z-index:50; background:rgba(244,241,234,.92); backdrop-filter:blur(10px); border-bottom:1px solid var(--line); }
+  .topbar-inner { max-width:940px; margin:0 auto; padding:14px 20px; }
+  .brand { font-family:"Outfit",sans-serif; font-weight:800; font-size:15px; letter-spacing:.04em; display:flex; align-items:center; gap:10px; }
+  .brand .dot { width:9px; height:9px; border-radius:50%; background:var(--teal); display:inline-block; }
+  .brand small { font-weight:500; color:var(--ink-soft); font-family:"Zen Kaku Gothic New",sans-serif; letter-spacing:0; }
+  .maintabs { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .maintab { font-family:"Zen Kaku Gothic New",sans-serif; font-size:13px; font-weight:600; padding:8px 16px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--ink-soft); cursor:pointer; transition:all .18s; white-space:nowrap; }
+  .maintab:hover { border-color:var(--teal); color:var(--teal-deep); }
+  .maintab.active { background:var(--teal); border-color:var(--teal); color:#fff; }
+  .maintab .mini { font-family:"Outfit",sans-serif; font-size:10px; opacity:.7; margin-right:4px; }
+
+  /* ===== ページ ===== */
+  .page { display:none; padding:32px 0 96px; }
+  .page.show { display:block; }
+
+  /* ===== サブタブ ===== */
+  .subtabs { display:flex; gap:0; margin:20px 0 0; border-bottom:2px solid var(--line); }
+  .subtab { font-family:"Zen Kaku Gothic New",sans-serif; font-size:14px; font-weight:600; padding:10px 22px; border:none; background:none; color:var(--ink-soft); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; transition:all .18s; }
+  .subtab:hover { color:var(--teal-deep); }
+  .subtab.active { color:var(--teal-deep); border-bottom-color:var(--teal); }
+  .subtab .mini { font-family:"Outfit",sans-serif; font-size:10px; background:rgba(12,125,110,.12); color:var(--teal-deep); border-radius:4px; padding:1px 5px; margin-right:6px; }
+  .subtab.active .mini { background:var(--teal); color:#fff; }
+  .subpage { display:none; padding-top:24px; }
+  .subpage.show { display:block; }
+
+  /* ===== トピックヘッダ ===== */
+  .topic-title { font-size:clamp(22px,4vw,36px); font-weight:900; letter-spacing:-.02em; margin:16px 0 4px; }
+  .backhome { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--ink-soft); cursor:pointer; background:none; border:none; font-family:inherit; margin-bottom:0; }
+  .backhome:hover { color:var(--teal-deep); }
+  .eyebrow { font-family:"Outfit",sans-serif; font-weight:600; letter-spacing:.18em; text-transform:uppercase; font-size:12px; color:var(--teal); }
+
+  /* ===== ホーム ===== */
+  .home-hero { padding:48px 0 20px; }
+  .home-hero h1 { font-size:clamp(28px,5vw,44px); font-weight:900; letter-spacing:-.02em; margin:8px 0 12px; }
+  .home-hero p { color:var(--ink-soft); font-size:15px; max-width:58ch; }
+  .topic-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:28px; }
+  @media (max-width:720px){ .topic-cards{ grid-template-columns:1fr; } }
+  .tpcard { background:var(--card); border-radius:18px; padding:24px 26px; box-shadow:var(--shadow); cursor:pointer; border-top:4px solid var(--teal); transition:transform .18s, box-shadow .18s; text-align:left; font-family:inherit; display:flex; flex-direction:column; gap:6px; }
+  .tpcard:hover { transform:translateY(-3px); box-shadow:0 10px 28px rgba(10,31,46,.1); }
+  .tpcard .tc-num { font-family:"Outfit",sans-serif; font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--teal); }
+  .tpcard .tc-ttl { font-size:17px; font-weight:700; }
+  .tpcard .tc-desc { font-size:13px; color:var(--ink-soft); }
+  .tpcard .tc-badges { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .badge { font-size:11px; font-weight:700; font-family:"Outfit",sans-serif; padding:3px 9px; border-radius:999px; }
+  .badge.mcp { background:rgba(12,125,110,.12); color:var(--teal-deep); }
+  .badge.web { background:rgba(226,96,63,.12); color:var(--coral); }
+  .section-label { font-family:"Outfit",sans-serif; font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-soft); margin:40px 0 14px; display:flex; align-items:center; gap:10px; }
+  .section-label::before { content:""; width:22px; height:3px; background:var(--teal); border-radius:2px; }
+  .note-box { background:var(--card); border:1px dashed var(--line); border-radius:14px; padding:18px 22px; margin-top:28px; font-size:13px; color:var(--ink-soft); }
+  .note-box b { color:var(--ink); }
+
+  /* ===== MCPレポート共通ビジュアル ===== */
+  .h1.title { font-size:clamp(28px,5vw,42px); font-weight:900; letter-spacing:-.02em; line-height:1.15; margin:4px 0 12px; }
+  h1.title { font-size:clamp(28px,5vw,42px); font-weight:900; letter-spacing:-.02em; line-height:1.15; margin:4px 0 12px; }
+  .sub { color:var(--ink-soft); font-size:14px; margin-bottom:28px; }
+  .hero { display:grid; grid-template-columns:1.4fr 1fr; gap:18px; margin-top:20px; }
+  @media (max-width:720px){ .hero{ grid-template-columns:1fr; } }
+  .hero-main { background:linear-gradient(145deg,var(--teal),var(--teal-deep)); color:#fff; border-radius:22px; padding:38px 36px; box-shadow:var(--shadow); position:relative; overflow:hidden; }
+  .hero-main::after { content:""; position:absolute; right:-40px; bottom:-40px; width:200px; height:200px; border-radius:50%; background:rgba(255,255,255,.06); }
+  .hero-main .label { font-size:14px; opacity:.85; font-weight:500; }
+  .hero-main .big { font-family:"Outfit",sans-serif; font-size:clamp(54px,9vw,88px); font-weight:800; line-height:1; margin:6px 0; letter-spacing:-.03em; }
+  .hero-main .big small { font-size:.38em; font-weight:600; opacity:.9; }
+  .hero-main .note { font-size:14px; opacity:.9; max-width:30ch; }
+  .hero-side { display:grid; grid-template-rows:1fr 1fr; gap:18px; }
+  .stat { background:var(--card); border-radius:18px; padding:22px 24px; box-shadow:var(--shadow); display:flex; flex-direction:column; justify-content:center; }
+  .stat .k { font-size:13px; color:var(--ink-soft); font-weight:500; }
+  .stat .v { font-family:"Outfit",sans-serif; font-size:34px; font-weight:800; letter-spacing:-.02em; }
+  .stat .v.coral { color:var(--coral); } .stat .v.teal { color:var(--teal); }
+  section { margin-top:44px; }
+  h2.sec { font-size:13px; font-family:"Outfit",sans-serif; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:18px; display:flex; align-items:center; gap:10px; }
+  h2.sec::before { content:""; width:22px; height:3px; background:var(--coral); border-radius:2px; }
+  .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  @media (max-width:720px){ .cards{ grid-template-columns:1fr; } }
+  .rank { background:var(--card); border-radius:18px; padding:24px; box-shadow:var(--shadow); border-top:4px solid var(--line); }
+  .rank.g1 { border-top-color:var(--gold); } .rank.g2 { border-top-color:#9fb0b8; } .rank.g3 { border-top-color:#c08a5a; }
+  .rank .medal { font-size:26px; } .rank .name { font-weight:700; font-size:19px; margin:6px 0 2px; }
+  .rank .mult { font-family:"Outfit",sans-serif; font-size:40px; font-weight:800; color:var(--teal); letter-spacing:-.02em; line-height:1; }
+  .rank .mult small { font-size:.4em; color:var(--ink-soft); font-weight:600; }
+  .rank .detail { font-size:13px; color:var(--ink-soft); margin-top:10px; }
+  .bars { background:var(--card); border-radius:18px; padding:28px 30px; box-shadow:var(--shadow); }
+  .bar-row { display:grid; grid-template-columns:150px 1fr 50px; align-items:center; gap:14px; padding:7px 0; }
+  .bar-row .tag { font-weight:600; font-size:14px; }
+  .track { background:#eef0ec; border-radius:999px; height:16px; overflow:hidden; }
+  .fill { height:100%; border-radius:999px; background:linear-gradient(90deg,var(--teal),var(--teal-deep)); }
+  .fill.low { background:linear-gradient(90deg,#e2a03f,var(--coral)); }
+  .fill.mid { background:linear-gradient(90deg,#5ba89c,var(--teal)); }
+  .fill.human { background:linear-gradient(90deg,#e2a03f,var(--coral)); }
+  .bar-row .num { text-align:right; font-family:"Outfit",sans-serif; font-weight:700; font-size:14px; }
+  .legend { display:flex; gap:18px; font-size:13px; color:var(--ink-soft); margin-top:14px; flex-wrap:wrap; }
+  .legend i { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
+  .split { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:720px){ .split{ grid-template-columns:1fr; } }
+  .panel { background:var(--card); border-radius:18px; padding:24px 26px; box-shadow:var(--shadow); }
+  .panel h4 { font-size:15px; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .pill { display:inline-block; font-size:12px; font-weight:600; padding:2px 10px; border-radius:999px; }
+  .pill.ai { background:rgba(12,125,110,.12); color:var(--teal-deep); }
+  .pill.human { background:rgba(226,96,63,.12); color:var(--coral); }
+  .panel ul { list-style:none; }
+  .panel li { padding:7px 0; border-bottom:1px dashed var(--line); font-size:14px; display:flex; justify-content:space-between; }
+  .panel li:last-child { border-bottom:none; }
+  .panel li b { font-family:"Outfit",sans-serif; }
+  .trend { background:var(--card); border-radius:18px; padding:28px 30px; box-shadow:var(--shadow); }
+  .trend .line { display:flex; align-items:flex-end; gap:18px; height:160px; padding:10px 0 0; }
+  .trend .col { flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; height:100%; justify-content:flex-end; }
+  .trend .colbar { width:100%; max-width:54px; background:linear-gradient(180deg,var(--teal),var(--teal-deep)); border-radius:8px 8px 0 0; }
+  .trend .colbar.future { background:repeating-linear-gradient(135deg,rgba(12,125,110,.5),rgba(12,125,110,.5) 6px,rgba(12,125,110,.3) 6px,rgba(12,125,110,.3) 12px); }
+  .trend .cv { font-family:"Outfit",sans-serif; font-weight:700; font-size:15px; }
+  .trend .cl { font-size:12px; color:var(--ink-soft); }
+  .takeaway { background:linear-gradient(135deg,#0a1f2e,#143849); color:#fff; border-radius:22px; padding:36px 38px; margin-top:44px; box-shadow:var(--shadow); }
+  .takeaway .eyebrow { color:#7fd3c5; font-family:"Outfit",sans-serif; font-weight:600; letter-spacing:.18em; text-transform:uppercase; font-size:12px; }
+  .takeaway h3 { font-size:22px; font-weight:800; margin:8px 0 12px; }
+  .takeaway p { opacity:.9; font-size:15px; }
+  .takeaway .kpi { font-family:"Outfit",sans-serif; color:#7fd3c5; font-weight:800; }
+  /* VS layout (env) */
+  .vs { display:grid; grid-template-columns:1fr auto 1fr; gap:18px; align-items:stretch; margin-top:20px; }
+  @media (max-width:720px){ .vs{ grid-template-columns:1fr; } .vsmid{ display:none; } }
+  .repo { background:var(--card); border-radius:22px; padding:30px 32px; box-shadow:var(--shadow); border-top:5px solid var(--line); }
+  .repo.win { border-top-color:var(--gold); }
+  .repo .rank-badge { font-family:"Outfit",sans-serif; font-size:13px; font-weight:700; letter-spacing:.08em; color:var(--ink-soft); }
+  .repo .nm { font-size:24px; font-weight:800; margin:2px 0 8px; }
+  .repo .score { font-family:"Outfit",sans-serif; font-size:64px; font-weight:800; line-height:1; letter-spacing:-.03em; color:var(--teal); }
+  .repo .score small { font-size:.32em; color:var(--ink-soft); font-weight:600; }
+  .repo .tools { font-size:13px; color:var(--ink-soft); margin-top:10px; }
+  .repo .delta { display:inline-block; margin-top:12px; font-family:"Outfit",sans-serif; font-weight:700; font-size:13px; background:rgba(12,125,110,.12); color:var(--teal-deep); padding:4px 12px; border-radius:999px; }
+  .vsmid { display:flex; align-items:center; justify-content:center; font-family:"Outfit",sans-serif; font-weight:800; color:var(--ink-soft); font-size:20px; }
+  .avg-note { text-align:center; color:var(--ink-soft); font-size:14px; margin-top:18px; }
+  .tools-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:720px){ .tools-grid{ grid-template-columns:1fr; } }
+  .tcard { background:var(--card); border-radius:18px; padding:22px 26px; box-shadow:var(--shadow); }
+  .tcard h4 { font-size:17px; font-weight:700; margin-bottom:12px; }
+  .tcard ul { list-style:none; }
+  .tcard li { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px dashed var(--line); font-size:14px; }
+  .tcard li:last-child { border-bottom:none; }
+  .chk { font-weight:600; } .chk.yes { color:var(--teal); } .chk.no { color:var(--ink-soft); }
+  .gap { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  @media (max-width:720px){ .gap{ grid-template-columns:1fr; } }
+  .gcard { background:var(--card); border-radius:18px; padding:22px 24px; box-shadow:var(--shadow); border-left:4px solid var(--coral); }
+  .gcard .who { font-weight:700; font-size:17px; }
+  .gcard .rate { font-family:"Outfit",sans-serif; font-size:30px; font-weight:800; color:var(--coral); }
+  .gcard .rate small { font-size:.45em; color:var(--ink-soft); font-weight:600; }
+  .gcard .act { font-size:13px; color:var(--ink-soft); margin-top:8px; }
+  .gcard .act b { color:var(--teal-deep); }
+  /* raw output */
+  .raw { margin-top:44px; }
+  .raw-toggle { display:flex; align-items:center; gap:10px; cursor:pointer; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 22px; box-shadow:var(--shadow); font-weight:600; font-size:15px; user-select:none; }
+  .raw-toggle .chev { transition:transform .25s; color:var(--ink-soft); }
+  .raw-toggle.open .chev { transform:rotate(90deg); }
+  .raw-toggle .badge-raw { margin-left:auto; font-family:"Outfit",sans-serif; font-size:11px; letter-spacing:.1em; text-transform:uppercase; background:rgba(12,125,110,.12); color:var(--teal-deep); padding:4px 10px; border-radius:999px; }
+  .raw-body { display:none; margin-top:14px; background:var(--card); border:1px solid var(--md-border); border-radius:14px; padding:8px 28px 28px; }
+  .raw-body.show { display:block; }
+  .raw-body .hint { font-size:13px; color:var(--ink-soft); padding:14px 0; border-bottom:1px dashed var(--line); margin-bottom:8px; }
+  .md h1{font-size:1.5em;border-bottom:1px solid var(--md-border);padding-bottom:.3em;margin:20px 0 12px}
+  .md h2{font-size:1.25em;border-bottom:1px solid var(--md-border);padding-bottom:.3em;margin:22px 0 10px}
+  .md h3{font-size:1.1em;margin:16px 0 8px}
+  .md h4{font-size:1em;margin:12px 0 6px}
+  .md table{border-collapse:collapse;width:100%;margin:12px 0;display:block;overflow-x:auto;font-size:14px}
+  .md th,.md td{border:1px solid var(--md-border);padding:6px 12px;text-align:left}
+  .md th{background:var(--code-bg);font-weight:600}
+  .md blockquote{border-left:.25em solid var(--md-border);padding:0 1em;color:var(--ink-soft);margin:12px 0}
+  .md ul{padding-left:1.6em;margin:8px 0}
+  .md pre{background:var(--code-bg);padding:14px;border-radius:8px;overflow-x:auto;margin:10px 0}
+  .md code{background:var(--code-bg);padding:.15em .35em;border-radius:4px;font-size:85%;font-family:ui-monospace,monospace}
+  .md pre code{background:none;padding:0}
+  .md hr{border:none;border-top:1px solid var(--md-border);margin:16px 0}
+  .md p{margin:8px 0}
+  .foot { color:var(--ink-soft); font-size:12px; margin-top:40px; text-align:center; }
+  /* 改善提案の定義リスト */
+  dl.proposal-dl { background:var(--code-bg); border-radius:10px; padding:16px 20px; margin:10px 0; }
+  dl.proposal-dl dt { font-weight:700; font-size:13px; color:var(--ink-soft); margin-top:10px; }
+  dl.proposal-dl dt:first-child { margin-top:0; }
+  dl.proposal-dl dd { margin:4px 0 0 0; font-size:14px; color:var(--ink); }
+  dl.proposal-dl dd ul { padding-left:1.4em; margin:4px 0; }
+  dl.proposal-dl dd ul li { font-size:14px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand"><span class="dot"></span>Findy AI+ <small>／ ブースデモ</small></div>
+    <div class="maintabs">
+      <button class="maintab active" onclick="showMain('home',this)">🏠 ホーム</button>
+      <button class="maintab" onclick="showMain('env',this)">AI活用基盤整備</button>
+      <button class="maintab" onclick="showMain('collab',this)">AI活用格差の可視化</button>
+      <button class="maintab" onclick="showMain('cost',this)">AIコスト最適化</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ホーム ===== -->
+<div class="page show" id="page-home">
+<div class="wrap">
+  <div class="home-hero">
+    <div class="eyebrow">Conference Booth ・ Demo Index</div>
+    <h1>ブースデモ</h1>
+    <p>来場者の課題に合わせて、上部タブまたは下のカードから該当の課題を選んでください。各課題ページでMCP分析レポートとWEBダッシュボードを切り替えて見せられます。</p>
+  </div>
+  <div class="section-label">課題別デモ</div>
+  <div class="topic-cards">
+    <button class="tpcard" onclick="showMain('env',document.querySelectorAll('.maintab')[1])">
+      <div class="tc-num">課題 01</div>
+      <div class="tc-ttl">AI活用基盤整備</div>
+      <div class="tc-desc">リポジトリのAIツール設定をスコア化。スコア比較と改善アクションを提示。</div>
+      <div class="tc-badges"><span class="badge mcp">MCP分析</span></div>
+    </button>
+    <button class="tpcard" onclick="showMain('collab',document.querySelectorAll('.maintab')[2])">
+      <div class="tc-num">課題 02</div>
+      <div class="tc-ttl">AI活用格差の可視化</div>
+      <div class="tc-desc">AI起因率62%、メンバー別活用率の格差を可視化し打ち手を提示。</div>
+      <div class="tc-badges"><span class="badge mcp">MCP分析</span><span class="badge web">WEB</span></div>
+    </button>
+    <button class="tpcard" onclick="showMain('cost',document.querySelectorAll('.maintab')[3])">
+      <div class="tc-num">課題 03</div>
+      <div class="tc-ttl">AIコスト最適化</div>
+      <div class="tc-desc">AIは人の16.7倍コスパ。ツール別ROIと年間$120K削減の試算。</div>
+      <div class="tc-badges"><span class="badge mcp">MCP分析</span><span class="badge web">WEB</span></div>
+    </button>
+  </div>
+  <div class="note-box" style="margin-top:32px">
+    <b>使い方の目安。</b> トークの流れ（Claude Code使ってる? → 課題は?）に沿って、該当課題タブを開き、MCP分析またはWEBダッシュボードを切り替えて見せます。MCP分析はこのファイル内に全文収録されておりオフラインでも表示できます。WEBはWiFi接続時に実画面をご確認いただけます。
+  </div>
+</div>
+</div>
+
+<div class="page" id="page-env">
+<div class="wrap">
+  <button class="backhome" onclick="showMain('home',document.querySelectorAll('.maintab')[0])">← ホームに戻る</button>
+  <h1 class="topic-title">AI活用基盤整備</h1>
+  <div class="subtabs">
+    <button class="subtab active" onclick="showSub(this,'env-mcp')"><span class="mini">MCP</span>分析レポート</button>
+    <button class="subtab" onclick="showSub(this,'env-web')"><span class="mini">WEB</span>ダッシュボード</button>
+  </div>
+  <div class="subpage show" id="env-mcp">
+<div class="eyebrow">Findy AI+ ・ MCP Analysis</div>
+  <h1 class="title">AI活用環境 分析レポート</h1>
+  <p class="sub">リポジトリA vs リポジトリB（複数リポジトリ比較）／ 2026年1月6日 ／ MCP自動生成データをもとに作成</p>
+
+  <div class="vs">
+    <div class="repo win">
+      <div class="rank">🥇 1位</div>
+      <div class="nm">リポジトリB</div>
+      <div class="score">90<small>/100</small></div>
+      <div class="tools">Claude Code + Cursor</div>
+      <div class="delta">前回比 +5点 ⬆</div>
+    </div>
+    <div class="vsmid">VS</div>
+    <div class="repo">
+      <div class="rank">🥈 2位</div>
+      <div class="nm">リポジトリA</div>
+      <div class="score">89<small>/100</small></div>
+      <div class="tools">Claude Code + GitHub Copilot</div>
+      <div class="delta">前回比 +7点 ⬆</div>
+    </div>
+  </div>
+  <p class="avg-note">全社平均 58点 ／ 両リポジトリとも組織内で最もAI活用が進んでいる水準</p>
+
+  <section>
+    <h2 class="sec">使用AIツール検出結果</h2>
+    <div class="tools-grid">
+      <div class="tcard">
+        <h4>リポジトリA</h4>
+        <ul>
+          <li>Claude Code <span class="chk yes">✅ 確認済（19ファイル）</span></li>
+          <li>GitHub Copilot <span class="chk yes">✅ 確認済（115行）</span></li>
+          <li>Cursor <span class="chk no">❓ 不明</span></li>
+          <li>Devin <span class="chk no">❓ 不明</span></li>
+        </ul>
+      </div>
+      <div class="tcard">
+        <h4>リポジトリB</h4>
+        <ul>
+          <li>Claude Code <span class="chk yes">✅ 確認済（12ファイル）</span></li>
+          <li>Cursor <span class="chk yes">✅ 確認済（120行）</span></li>
+          <li>GitHub Copilot <span class="chk no">❓ 不明</span></li>
+          <li>Devin <span class="chk no">❓ 不明</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">スコア推移（前回 → 今回）</h2>
+    <div class="bars">
+      <div class="bar-row"><span class="tag">リポジトリA 総合</span><div class="track"><div class="fill" style="width:89%"></div></div><span class="num">82→89</span></div>
+      <div class="bar-row"><span class="tag">リポジトリB 総合</span><div class="track"><div class="fill" style="width:90%"></div></div><span class="num">85→90</span></div>
+    </div>
+    <p style="font-size:13px;color:var(--ink-soft);margin-top:14px">リポジトリAは7日で+7点（Jira連携・Sentry統合追加）、リポジトリBは8日で+5点（CLAUDE.md詳細化・Cursor統合）。改善ペース維持で次回95点超えの見込み。</p>
+  </section>
+
+  <section>
+    <h2 class="sec">最優先アクション</h2>
+    <div class="split">
+      <div class="panel">
+        <h4>リポジトリA</h4>
+        <ul>
+          <li>Cursor 使用状況の確認（使用中なら +10点）</li>
+          <li>CLAUDE.md の詳細化（+3点 / AI理解精度+40%）</li>
+          <li>MCP統合の説明を追記（+2点）</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h4>リポジトリB</h4>
+        <ul>
+          <li>GitHub Copilot の使用状況確認（使用中なら +15点）</li>
+          <li>カスタムエージェント導入（+2点 / コミット時間-50%）</li>
+          <li>カスタムコマンド拡充（+2点）</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="takeaway">
+    <div class="eyebrow">Key Insight</div>
+    <h3>両者は強みが補完関係。相互にベストプラクティスを展開すれば双方が伸びる</h3>
+    <p>リポジトリAはカスタムコマンド・自動化（Jira/Sentry）が強く、リポジトリBはCLAUDE.mdの品質とMCP説明が圧倒的。互いの強みを移植することで、組織全体のAI活用基盤を底上げできます。</p>
+  </div>
+<div class="raw">
+    <div class="raw-toggle" onclick="this.classList.toggle('open');document.getElementById('rb1').classList.toggle('show')">
+      <span class="chev">▶</span>
+      <span>MCPの実際の出力（Markdown）を表示</span>
+      <span class="badge">Raw Output</span>
+    </div>
+    <div class="raw-body" id="rb1">
+      <p class="hint">上のビジュアルは、このMCP出力データをもとに作成しています。以下はMCPプロンプトが返す実際のレポート本文の全文です。</p>
+      <div class="md">
+        <h1>📊 AI活用環境 分析レポート（デモ）</h1>
+        <p>分析日時: 2026-01-06T10:30:00Z　分析対象: リポジトリA vs リポジトリB（複数リポジトリ比較）　分析バージョン: MVP v1.1（改善版評価基準適用）</p>
+
+        <h2>📑 目次</h2>
+        <p><strong>エグゼクティブサマリー（30秒で読める）</strong></p>
+        <ul>
+          <li>🔍 使用AIツール検出結果</li>
+          <li>📈 総合スコア比較</li>
+          <li>🔄 前回分析からのスコア変動</li>
+          <li>🎯 最優先アクション Top 3</li>
+          <li>💡 重要インサイト</li>
+          <li>✨ ベストプラクティス共有</li>
+          <li>👥 AI活用推進メンバー</li>
+        </ul>
+        <p><strong>詳細分析（必要時に参照）</strong></p>
+        <ul>
+          <li>📊 詳細スコア比較</li>
+          <li>🏆 最終評価</li>
+          <li>🎯 相互ベストプラクティス展開提案</li>
+        </ul>
+
+        <h2>🔍 使用AIツール検出結果</h2>
+        <h3>リポジトリA リポジトリ</h3>
+        <ul>
+          <li>Claude Code: ✅ 確認済（.claude/ 充実、19ファイル）</li>
+          <li>GitHub Copilot: ✅ 確認済（copilot-instructions.md 存在、115行）</li>
+          <li>Cursor: ❓ 使用不明（設定ファイルなし）</li>
+          <li>Devin: ❓ 使用不明（設定ファイルなし）</li>
+        </ul>
+        <h3>リポジトリB リポジトリ</h3>
+        <ul>
+          <li>Claude Code: ✅ 確認済（.claude/ 充実、12ファイル）</li>
+          <li>GitHub Copilot: ❓ 使用不明（設定ファイルなし）</li>
+          <li>Cursor: ✅ 確認済（.cursorrules 存在、120行）</li>
+          <li>Devin: ❓ 使用不明（設定ファイルなし）</li>
+        </ul>
+
+        <h2>📈 総合スコア比較</h2>
+        <table><thead><tr><th>リポジトリ</th><th>総合スコア</th><th>ランク</th><th>使用AIツール戦略</th></tr></thead>
+        <tbody>
+          <tr><td>リポジトリB</td><td>90点 / 100点</td><td>🥇 1位</td><td>Claude Code + Cursor</td></tr>
+          <tr><td>リポジトリA</td><td>89点 / 100点</td><td>🥈 2位</td><td>Claude Code + GitHub Copilot</td></tr>
+        </tbody></table>
+        <p>全社平均: 58点</p>
+        <blockquote>※ 重要: スコアは絶対評価（他リポジトリとの比較で減点なし）<br>※ ランキング: 複数リポジトリ比較時の参考情報（スコアに影響しません）</blockquote>
+
+        <h2>🔄 前回分析からのスコア変動</h2>
+        <h3>リポジトリA リポジトリ</h3>
+        <ul>
+          <li>分析実行履歴: 今回 2026-01-06T10:30:00Z</li>
+          <li>前回 2025-12-30T14:15:00Z</li>
+          <li>期間 7日間</li>
+        </ul>
+        <p>スコア推移:</p>
+        <ul>
+          <li>総合スコア: 82点 → 89点 (+7点)</li>
+          <li>量: 16点 → 19点 (+3点)</li>
+          <li>質: 18点 → 20点 (+2点)</li>
+          <li>統合: 14点 → 15点 (+1点)</li>
+          <li>浸透: 16点 → 17点 (+1点)</li>
+        </ul>
+        <p>📈 前回比: +7点 ⬆️</p>
+        <p>🔄 変動理由:</p>
+        <ul>
+          <li><strong>+3点: Jira連携コマンド追加</strong> (量+2, 統合+1) — .claude/commands/jira/ に3コマンド追加 (@member-a, 2026-01-02)、プロジェクト管理ツールとの連携強化</li>
+          <li><strong>+2点: Sentry統合MCP追加</strong> (質+1, 統合+1) — .claude/mcp/sentry.json 追加 (@member-c, 2026-01-04)、エラー追跡自動化を実現</li>
+          <li><strong>+1点: CLAUDE.md 更新（最新性向上）</strong> (質+1) — MCP統合説明を追加 (@member-a, 2026-01-03)、ベストプラクティス準拠度 0.5→1.0点、新機能活用度 プラグイン機能の説明追加</li>
+          <li><strong>+1点: カスタムエージェント追加</strong> (量+1) — .claude/agents/commit-creator.md 追加 (@member-a, 2026-01-05)</li>
+        </ul>
+        <p><strong>次回への提案:</strong> 前回→今回の改善ペース（7日で+7点）を維持すると、次回（+7日後）には総合スコア95点超えが期待されます。優先すべき改善項目:</p>
+        <ul>
+          <li>Cursor 設定ファイル追加（使用している場合、+10点の余地）</li>
+          <li>カスタムコマンド数の拡充（+5点の余地）</li>
+          <li>GitHub Copilot 指示ファイルの充実（+3点の余地）</li>
+        </ul>
+        <h3>リポジトリB リポジトリ</h3>
+        <ul>
+          <li>分析実行履歴: 今回 2026-01-06T10:30:00Z</li>
+          <li>前回 2025-12-29T10:00:00Z</li>
+          <li>期間 8日間</li>
+        </ul>
+        <p>スコア推移:</p>
+        <ul>
+          <li>総合スコア: 85点 → 90点 (+5点)</li>
+          <li>量: 17点 → 18点 (+1点)</li>
+          <li>質: 19点 → 20点 (+1点)</li>
+          <li>統合: 13点 → 15点 (+2点)</li>
+          <li>浸透: 16点 → 17点 (+1点)</li>
+        </ul>
+        <p>📈 前回比: +5点 ⬆️</p>
+        <p>🔄 変動理由:</p>
+        <ul>
+          <li><strong>+2点: CLAUDE.md 詳細化（最新性向上）</strong> (質+2) — プロジェクト概要・アーキテクチャを詳細化 (@member-e, 2026-01-01)、ベストプラクティス準拠度 1.0点に到達、充実度スコアは既に満点維持、AIの理解精度が大幅に向上</li>
+          <li><strong>+2点: MCP設定の説明明示化（最新性向上）</strong> (統合+2) — .claude/settings.json に各MCPの用途記載 (@member-e, 2026-01-03)、ベストプラクティス準拠度向上、新規メンバーの理解を促進</li>
+          <li><strong>+1点: Cursor統合追加</strong> (量+1) — .cursorrules 追加 (@member-e, 2025-12-31)、詳細なコーディング規約を定義</li>
+        </ul>
+        <p><strong>次回への提案:</strong> 前回→今回の改善ペース（8日で+5点）を維持すると、次回（+8日後）には総合スコア95点到達が期待されます。優先すべき改善項目:</p>
+        <ul>
+          <li>カスタムエージェント導入（+3点の余地）</li>
+          <li>カスタムコマンド数の拡充（+5点の余地）</li>
+          <li>GitHub Copilot 統合（使用している場合、+15点の余地）</li>
+        </ul>
+
+        <h2>🎯 最優先アクション Top 3</h2>
+        <h3>リポジトリA リポジトリ</h3>
+        <ul>
+          <li><strong>[確認] Cursor の使用状況を確認</strong> — ❓ 使用中の場合: .cursorrules を追加（+10点、1時間）／ ❌ 未使用の場合: アクション不要</li>
+          <li><strong>[Easy] CLAUDE.md の詳細化</strong>（+3点、3時間）— 💡参考: リポジトリB リポジトリの CLAUDE.md ／ 📍場所: /CLAUDE.md ／ 📦効果: AIの理解精度 +40%</li>
+          <li><strong>[Medium] MCP統合の説明を追記</strong>（+2点、1時間）— 💡参考: リポジトリB の settings.json ／ 📍場所: /.claude/settings.json ／ 📦効果: 新規メンバーのオンボーディング時間 -50%</li>
+        </ul>
+        <h3>リポジトリB リポジトリ</h3>
+        <ul>
+          <li><strong>[確認] GitHub Copilot の使用状況を確認</strong> — ❓ 使用中の場合: .github/copilot-instructions.md を追加（+15点、2時間）／ ❌ 未使用の場合: アクション不要</li>
+          <li><strong>[Medium] カスタムエージェントの導入</strong>（+2点、4時間）— 💡参考: リポジトリA の commit-creator エージェント ／ 📍場所: /.claude/agents/ ／ 📦効果: コミット作成時間 -50%</li>
+          <li><strong>[Easy] カスタムコマンド数の拡充</strong>（+2点、6時間）— 💡参考: リポジトリA の Jira統合コマンド ／ 📍場所: /.claude/commands/ ／ 📦効果: 定型作業の自動化率 +30%</li>
+        </ul>
+
+        <h2>💡 重要インサイト</h2>
+        <h4>共通の強み</h4>
+        <ul>
+          <li>✅ 両リポジトリとも Claude Code の設定が充実</li>
+          <li>✅ プロジェクト固有の指示ファイルが整備されている</li>
+          <li>✅ 組織内で最もAI活用が進んでいるリポジトリ</li>
+        </ul>
+        <h4>リポジトリA の真の強み</h4>
+        <ul>
+          <li>✅ 使用AIツールへの徹底最適化（Claude + Copilot）</li>
+          <li>✅ カスタムコマンド数が圧倒的（12種）</li>
+          <li>✅ プロジェクト固有の高度な自動化（Jira/Sentry統合）</li>
+          <li>⚠️ CLAUDE.md の詳細度が リポジトリB に劣る</li>
+        </ul>
+        <h4>リポジトリB の真の強み</h4>
+        <ul>
+          <li>✅ CLAUDE.md の品質が圧倒的（極めて詳細）</li>
+          <li>✅ 複数AIツール対応（Claude + Cursor）</li>
+          <li>✅ MCP設定の説明が明示的（settings.json に用途記載）</li>
+          <li>⚠️ カスタムコマンド数が リポジトリA に劣る（4種）</li>
+        </ul>
+
+        <h2>✨ ベストプラクティス共有</h2>
+        <h4>リポジトリA から学ぶべきポイント</h4>
+        <ul>
+          <li>📦 Jira駆動開発コマンド（3種）: create-jira-issue, update-jira-issue, link-pr-to-jira ／ 参考: /.claude/commands/jira/</li>
+          <li>📦 Sentry統合（エラー追跡自動化）／ 参考: /.claude/mcp/sentry.json</li>
+          <li>📦 GitHub Copilot 指示の詳細度（115行）／ 参考: /.github/copilot-instructions.md</li>
+        </ul>
+        <h4>リポジトリB から学ぶべきポイント</h4>
+        <ul>
+          <li>📦 CLAUDE.md の構造（極めて詳細）: プロジェクト概要、アーキテクチャ、開発コマンドが明確 ／ 参考: /CLAUDE.md</li>
+          <li>📦 MCP設定の説明明示（各MCPの用途を記載）／ 参考: /.claude/settings.json の mcpServers セクション</li>
+          <li>📦 Cursor統合（.cursorrules の品質）／ 参考: /.cursorrules</li>
+        </ul>
+
+        <h2>👥 AI活用推進メンバー（過去30日）</h2>
+        <h4>リポジトリA リポジトリ</h4>
+        <ul>
+          <li>@member-a: 5コミット、3PR（Jiraコマンド、エージェント、MCP統合）</li>
+          <li>@member-b: 3コミット、2PR（Copilot指示、MCP設定）</li>
+          <li>@member-c: 2コミット（Sentry統合）</li>
+          <li>@member-d: 1PR（CLAUDE.md更新）</li>
+        </ul>
+        <h4>リポジトリB リポジトリ</h4>
+        <ul>
+          <li>@member-e: 4コミット、2PR（Cursor統合、CLAUDE.md詳細化、MCP説明）</li>
+          <li>@member-f: 2コミット、1PR（コマンド追加）</li>
+        </ul>
+
+        <hr>
+        <h2>📊 最新性スコア詳細</h2>
+        <h3>リポジトリA リポジトリ</h3>
+        <h4>Claude Code CLAUDE.md（最新性: 1/2点）</h4>
+        <p><strong>新機能活用度: 0.5/1点</strong></p>
+        <ul>
+          <li>✅ エージェント機能の説明あり（+0.5点）</li>
+          <li>❌ プラグイン機能の説明なし（0点）</li>
+        </ul>
+        <p><strong>ベストプラクティス準拠度: 0.5/1点</strong></p>
+        <ul>
+          <li>✅ プロジェクト概要記載あり（+0.33点）</li>
+          <li>❌ アーキテクチャの詳細度が低い（0点）</li>
+          <li>✅ 開発コマンド記載あり（+0.17点）</li>
+        </ul>
+        <p><strong>改善提案:</strong></p>
+        <ol>
+          <li>プラグイン機能の説明を追加（+0.5点）</li>
+          <li>アーキテクチャセクションを詳細化（+0.33点）</li>
+        </ol>
+        <h4>Claude Code settings.json（最新性: 2/2点）</h4>
+        <p><strong>新機能活用度: 1.0/1点</strong></p>
+        <ul>
+          <li>✅ プラグイン設定あり（+0.5点）</li>
+          <li>✅ エージェント設定あり（+0.5点）</li>
+        </ul>
+        <p><strong>ベストプラクティス準拠度: 1.0/1点</strong></p>
+        <ul>
+          <li>✅ MCP設定の説明が明示的（+0.5点）</li>
+          <li>✅ permissions設定が適切（+0.5点）</li>
+        </ul>
+        <p>評価: 最新性スコア満点。改善不要。</p>
+        <h4>GitHub Copilot copilot-instructions.md（最新性: 4/4点）</h4>
+        <p><strong>新機能活用度: 2.0/2点</strong></p>
+        <ul>
+          <li>✅ GitHub Copilot Chat指示記載あり（+1点）</li>
+          <li>✅ GitHub Copilot Workspace指示記載あり（+1点）</li>
+        </ul>
+        <p>ベストプラクティス準拠度: 2.0/2点 — ✅ 推奨パターン完全準拠（+2点）</p>
+        <p>評価: 最新性スコア満点。改善不要。</p>
+        <h3>リポジトリB リポジトリ</h3>
+        <h4>Claude Code CLAUDE.md（最新性: 2/2点）</h4>
+        <p><strong>新機能活用度: 1.0/1点</strong></p>
+        <ul>
+          <li>✅ エージェント機能の説明あり（+0.5点）</li>
+          <li>✅ プラグイン機能の説明あり（+0.5点）</li>
+        </ul>
+        <p><strong>ベストプラクティス準拠度: 1.0/1点</strong></p>
+        <ul>
+          <li>✅ プロジェクト概要詳細（+0.33点）</li>
+          <li>✅ アーキテクチャ詳細（+0.33点）</li>
+          <li>✅ 開発コマンド詳細（+0.34点）</li>
+        </ul>
+        <p>評価: 最新性スコア満点。改善不要。</p>
+        <h4>Claude Code settings.json（最新性: 1/2点）</h4>
+        <p><strong>新機能活用度: 0.5/1点</strong></p>
+        <ul>
+          <li>❌ プラグイン設定なし（0点）</li>
+          <li>✅ エージェント設定あり（+0.5点）</li>
+        </ul>
+        <p><strong>ベストプラクティス準拠度: 0.5/1点</strong></p>
+        <ul>
+          <li>✅ MCP設定の説明が明示的（+0.5点）</li>
+          <li>❌ permissions設定の説明不足（0点）</li>
+        </ul>
+        <p><strong>改善提案:</strong></p>
+        <ol>
+          <li>プラグイン設定を追加（+0.5点）</li>
+          <li>permissions設定の説明を追記（+0.5点）</li>
+        </ol>
+        <h4>Cursor .cursorrules（最新性: 4/4点）</h4>
+        <p>新機能活用度: 2.0/2点 — ✅ 最新機能を活用した詳細な設定（+2点）</p>
+        <p>ベストプラクティス準拠度: 2.0/2点 — ✅ 推奨パターン完全準拠（+2点）</p>
+        <p>評価: 最新性スコア満点。改善不要。</p>
+
+        <h2>📊 詳細スコア比較</h2>
+        <h4>AIエージェント設定ファイル品質（60点満点）</h4>
+        <p>※ 絶対評価: 使用中のAIツールの設定品質のみを評価（未使用ツールによる減点なし）</p>
+        <table><thead><tr><th>評価項目</th><th>リポジトリA</th><th>リポジトリB</th><th>差分</th></tr></thead>
+        <tbody>
+          <tr><td>Claude Code 設定</td><td>18/20点</td><td>18/20点</td><td>互角</td></tr>
+          <tr><td>└ CLAUDE.md</td><td>4/5点</td><td>5/5点</td><td>リポジトリB +1</td></tr>
+          <tr><td>　　└ 充実度</td><td>3/3点</td><td>3/3点</td><td>互角</td></tr>
+          <tr><td>　　└ 最新性</td><td>1/2点</td><td>2/2点</td><td>リポジトリB +1</td></tr>
+          <tr><td>　　　　└ 新機能活用</td><td>0.5/1点</td><td>1.0/1点</td><td>リポジトリB +0.5</td></tr>
+          <tr><td>　　　　└ ベストプラクティス</td><td>0.5/1点</td><td>1.0/1点</td><td>リポジトリB +0.5</td></tr>
+          <tr><td>└ settings.json</td><td>5/5点</td><td>4/5点</td><td>リポジトリA +1</td></tr>
+          <tr><td>　　└ 充実度</td><td>3/3点</td><td>3/3点</td><td>互角</td></tr>
+          <tr><td>　　└ 最新性</td><td>2/2点</td><td>1/2点</td><td>リポジトリA +1</td></tr>
+          <tr><td>　　　　└ 新機能活用</td><td>1.0/1点</td><td>0.5/1点</td><td>リポジトリA +0.5</td></tr>
+          <tr><td>　　　　└ ベストプラクティス</td><td>1.0/1点</td><td>0.5/1点</td><td>リポジトリA +0.5</td></tr>
+          <tr><td>└ エージェント</td><td>3/3点（4種）</td><td>0/3点</td><td>リポジトリA +3</td></tr>
+          <tr><td>└ MCP統合</td><td>3/3点（4種）</td><td>2/3点（2種）</td><td>リポジトリA +1</td></tr>
+          <tr><td>GitHub Copilot</td><td>15/15点</td><td>-</td><td>リポジトリA使用</td></tr>
+          <tr><td>└ copilot-instructions.md</td><td>10/10点</td><td>-</td><td>-</td></tr>
+          <tr><td>　　└ 充実度</td><td>6/6点</td><td>-</td><td>-</td></tr>
+          <tr><td>　　└ 最新性</td><td>4/4点</td><td>-</td><td>-</td></tr>
+          <tr><td>　　　　└ 新機能活用</td><td>2/2点</td><td>-</td><td>-</td></tr>
+          <tr><td>　　　　└ ベストプラクティス</td><td>2/2点</td><td>-</td><td>-</td></tr>
+          <tr><td>Cursor</td><td>-</td><td>10/10点</td><td>リポジトリB使用</td></tr>
+          <tr><td>└ .cursorrules</td><td>-</td><td>10/10点</td><td>-</td></tr>
+          <tr><td>　　└ 充実度</td><td>-</td><td>6/6点</td><td>-</td></tr>
+          <tr><td>　　└ 最新性</td><td>-</td><td>4/4点</td><td>-</td></tr>
+          <tr><td>　　　　└ 新機能活用</td><td>-</td><td>2/2点</td><td>-</td></tr>
+          <tr><td>　　　　└ ベストプラクティス</td><td>-</td><td>2/2点</td><td>-</td></tr>
+          <tr><td>その他指示ファイル</td><td>5/5点</td><td>5/5点</td><td>互角</td></tr>
+          <tr><td><strong>60点満点換算</strong></td><td><strong>57点</strong></td><td><strong>56点</strong></td><td>リポジトリA +1</td></tr>
+        </tbody></table>
+        <p>主な差異: リポジトリA — settings.jsonの最新性が高い（プラグイン・エージェント設定あり）、エージェント4種、MCP統合4種、GitHub Copilot充実（最新性満点）／ リポジトリB — CLAUDE.mdの最新性が高い（最新ベストプラクティス完全準拠）、Cursor統合（最新性満点）、MCP説明明示</p>
+        <h4>カスタムコマンド・スキル（20点満点）</h4>
+        <table><thead><tr><th>項目</th><th>リポジトリA</th><th>リポジトリB</th><th>差分</th></tr></thead>
+        <tbody>
+          <tr><td>エージェント</td><td>4種</td><td>0種</td><td>+4種</td></tr>
+          <tr><td>カスタムコマンド</td><td>12種</td><td>4種</td><td>+8種</td></tr>
+          <tr><td>スキル</td><td>7種</td><td>4種</td><td>+3種</td></tr>
+          <tr><td>スコア</td><td>20/20</td><td>18/20</td><td>リポジトリA +2</td></tr>
+        </tbody></table>
+        <p>リポジトリA の特徴: Jira連携3種、Sentry統合、GraphQL特化 ／ リポジトリB の特徴: 基本ワークフロー、MCP開発特化</p>
+        <h4>GitHub設定・ルール（20点満点）</h4>
+        <table><thead><tr><th>項目</th><th>リポジトリA</th><th>リポジトリB</th><th>差分</th></tr></thead>
+        <tbody>
+          <tr><td>GitHub設定</td><td>8/10点</td><td>8/10点</td><td>互角</td></tr>
+          <tr><td>ルール・ガイドライン</td><td>4/10点</td><td>8/10点</td><td>リポジトリB +4</td></tr>
+          <tr><td>小計</td><td>12/20</td><td>16/20</td><td>リポジトリB +4</td></tr>
+        </tbody></table>
+        <p>主な差異: リポジトリA — Issue テンプレート、指示ファイル6種、Prompt 9種 ／ リポジトリB — CLAUDE.md 圧倒的詳細度、MCP開発ガイド</p>
+
+        <h2>🏆 最終評価</h2>
+        <h4>リポジトリA（89点/100点）</h4>
+        <p>✅ 強み: カスタムコマンド12種（Jira/Sentry統合）／ GitHub Copilot充実（115行の詳細指示）／ MCP統合4種、エージェント4種</p>
+        <p>⚠️ 改善余地: CLAUDE.md の詳細度向上</p>
+        <h4>リポジトリB（90点/100点）</h4>
+        <p>✅ 強み: CLAUDE.md の品質が圧倒的 ／ Cursor統合、MCP設定説明が明示的</p>
+        <p>⚠️ 改善余地: カスタムコマンド数の拡充 ／ GitHub Copilot の使用状況確認（使用中なら +15点）／ エージェント概念の導入検討</p>
+
+        <h2>🎯 相互ベストプラクティス展開提案</h2>
+        <h3>リポジトリA → リポジトリB への展開推奨</h3>
+        <h4>1. GitHub Copilot 指示ファイルの追加 【最優先】</h4>
+        <p>ファイル: リポジトリB/.github/copilot-instructions.md</p>
+        <pre><code># GitHub Copilot Instructions for リポジトリB
+
+## TypeScript Style Guide
+
+**Must follow [TypeScript Deep Dive Style Guide](https://basarat.gitbook.io/typescript/styleguide):**
+
+- Use **named exports** (no default exports)
+- Use **union types** instead of `enum`
+- Use **`unknown`** instead of `any`
+- Use **`type`** instead of `interface`
+
+## File Naming Convention
+
+**Follow [Angular Coding Style Guide](https://angular.io/guide/styleguide):**
+
+- All file names use **kebab-case**
+- Examples: `xxx-yyy.ts`, `xxx-yyy.spec.ts`
+
+## Coding Rules
+
+- Add **1 blank line at end of file** (mandatory)
+- Use **object shorthand**: `{ foo }` not `{ foo: foo }`
+
+## Module Boundaries
+
+- Respect Nx `@nx/enforce-module-boundaries` rules
+- Scopes: `lock`, `wall`, `zell`, `shared`
+- Types: `application`, `feature`, `util`, `shared`
+
+## Commit Message Format
+
+- Root: `&lt;type&gt;: &lt;message&gt;`
+- Lock/Wall: `&lt;semantic-version&gt;-&lt;type&gt;(scope): &lt;message&gt;`
+- Plugin: `&lt;type&gt;(plugin): &lt;message&gt;`
+- Zell: `&lt;type&gt;(scope): &lt;message&gt;`
+
+Types: feat, fix, docs, refactor, test, style, chore, ci, perf</code></pre>
+        <p>効果: Copilot によるコード生成精度 +30%</p>
+        <h4>2. カスタムエージェントの導入</h4>
+        <p>リポジトリA の commit-creator/pr-creator をベースに リポジトリB 向けにカスタマイズ ／ ファイル: リポジトリB/.claude/agents/commit-creator.md</p>
+        <pre><code>---
+name: commit-creator
+description: リポジトリB プロジェクトの commit 規約に準拠したコミット作成エージェント
+tools: Bash, Glob, Grep, Read
+model: sonnet
+---
+
+**IMPORTANT: リポジトリB のコミット規約に従う:**
+
+- Root 変更: `&lt;type&gt;: &lt;message&gt;`
+- Lock/Wall: `&lt;semantic-version&gt;-&lt;type&gt;(scope): &lt;message&gt;`
+- Plugin: `&lt;type&gt;(plugin): &lt;message&gt;`
+- Zell: `&lt;type&gt;(scope): &lt;message&gt;`
+
+詳細は CLAUDE.md のコミット規約セクションを参照。</code></pre>
+        <p>効果: コミット作成時間 -50%、規約遵守率 100%</p>
+        <h4>3. Jira 連携コマンドの追加</h4>
+        <p>リポジトリA の create-jira-plan, exec-jira-issue を リポジトリB に追加 ／ ファイル: リポジトリB/.claude/commands/exec-jira-issue.md</p>
+        <pre><code>---
+description: Jiraのissueを取得して、その内容を実行する
+---
+
+Jira Issue を取得し、Issue の内容に基づいて実装計画を作成し、実行します。
+
+Read @CLAUDE.md</code></pre>
+        <p>効果: Jira 駆動開発のワークフロー自動化、タスク実行時間 -30%</p>
+
+        <h3>リポジトリB → リポジトリA への展開推奨</h3>
+        <h4>1. CLAUDE.md の詳細化 【最優先】</h4>
+        <p>現在の リポジトリA の CLAUDE.md（29行）→ リポジトリB レベルの詳細度（100行以上）へ拡充 ／ 追加すべきセクション:</p>
+        <pre><code># CLAUDE.md
+
+## プロジェクト概要
+
+リポジトリA は Findy Team+ の開発生産性可視化SaaSのフロントエンドアプリケーションです。
+
+- **技術スタック**: Next.js (App Router), React 18, TypeScript, Nx
+- **データ取得**: Apollo Client (GraphQL)
+- **スタイリング**: emotion (CSS-in-JS)
+- **テスト**: Vitest, React Testing Library
+
+## アーキテクチャ
+
+### ディレクトリ構造
+
+apps/vanadiel/     # Next.js アプリケーション
+libs/vanadiel/     # 共通ライブラリ
+libs/feature-*/    # 機能別ライブラリ
+
+### 設計パターン
+
+Page → Container → Facade → Presentational Component → Presenter
+
+疎結合設計により変更に強い構成を実現。詳細は `.github/instructions/coding-style.instructions.md` 参照。
+
+## 開発コマンド
+
+# リント実行（自動修正）
+npm run lint
+npm run stylelint
+
+# 型チェック
+npm run typecheck
+
+# テスト実行
+npm run test
+
+# ビルド実行
+npm run build
+
+## MCP サーバー統合
+
+本プロジェクトでは4つのMCPサーバーを統合しています：
+
+- Nx: Workspace管理、ジェネレータ実行
+- GitHub: Issue/PR管理
+- Sentry: エラー情報取得、修正ワークフロー
+- Atlassian: Jira Issue取得、Jira駆動開発
+
+## 機密ファイルの取り扱い
+（既存の内容を維持）
+
+## スキル
+（既存の内容を維持）
+
+## コミットとプルリクエストの作成
+（既存の内容を維持）</code></pre>
+        <p>効果: 新規メンバーのオンボーディング時間 -50%、AI の理解精度 +40%</p>
+        <h4>2. Cursor 設定ファイルの追加</h4>
+        <p>リポジトリB の .cursorrules をベースに リポジトリA 向けにカスタマイズ ／ ファイル: リポジトリA/.cursorrules</p>
+        <pre><code># リポジトリA Project Rules for Cursor
+
+## TypeScript &amp; React Style
+- TypeScript Deep Dive準拠
+- Angular スタイルガイド準拠
+- ファイル名: kebab-case
+- `type` 使用、`interface` 禁止
+- Object shorthand必須
+
+## Architecture
+- Nx monorepo with Findy Team+ feature libraries
+- Page → Container → Presenter → Facade → Presentational Component
+- 疎結合設計: Easy より Simple を目指す
+
+## Commit Format
+- Conventional Commits準拠
+- Format: `&lt;type&gt;[optional scope]: &lt;description&gt;`
+
+## Style Guides
+- Read @.github/instructions/coding-style.instructions.md
+- Read @.github/instructions/commit-message.instructions.md
+- Read @CLAUDE.md</code></pre>
+        <p>効果: Cursor ユーザーの生産性 +30%</p>
+        <h4>3. MCP サーバー設定の詳細化</h4>
+        <p>リポジトリB の settings.json をベースに、各MCPの説明を追記 ／ ファイル: リポジトリA/.claude/settings.json の enabledMcpServers セクション</p>
+        <pre><code>{
+  "enabledMcpServers": [
+    {
+      "name": "nx",
+      "description": "Nx workspace ドキュメントとプロジェクト管理。ジェネレータ実行、プロジェクト依存関係の確認に使用。",
+      "source": "https://github.com/nrwl/mcp-server-nx"
+    },
+    {
+      "name": "github",
+      "description": "GitHub Issue/PR の取得・作成。Issue駆動開発のワークフロー自動化に使用。",
+      "source": "https://github.com/modelcontextprotocol/servers/tree/main/src/github"
+    },
+    {
+      "name": "sentry",
+      "description": "Sentry エラー情報の取得。エラー修正ワークフローの自動化に使用。",
+      "source": "https://github.com/modelcontextprotocol/servers/tree/main/src/sentry"
+    },
+    {
+      "name": "atlassian",
+      "description": "Jira Issue の取得。Jira駆動開発のワークフロー自動化に使用。",
+      "source": "https://github.com/modelcontextprotocol/servers/tree/main/src/atlassian"
+    }
+  ]
+}</code></pre>
+        <p>効果: 新規メンバーのMCP理解度 +50%</p>
+
+      </div>
+    </div>
+</div>
+<p class="foot">MCP自動生成データをもとに作成 ／ データソース: GitHub リポジトリ解析 + Findy MCP Server</p>
+  </div>
+  <div class="subpage" id="env-web">
+<div style="padding:48px 0;text-align:center;color:var(--ink-soft)">
+  <div style="font-size:48px;margin-bottom:16px">🖥️</div>
+  <div style="font-size:18px;font-weight:700;color:var(--ink);margin-bottom:8px">WEB版ダッシュボード</div>
+  <p style="font-size:14px;max-width:44ch;margin:0 auto">Skills Usageでスキル利用状況を確認できます。<br>URL: <span style="color:var(--teal);font-weight:600">ai-plus.findy.io</span></p>
+  <div style="margin-top:24px;display:flex;flex-direction:column;gap:12px;max-width:400px;margin-left:auto;margin-right:auto">
+    <a href="https://ai-plus.findy.io/skills-usage" target="_blank" rel="noopener" style="display:flex;justify-content:space-between;align-items:center;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--coral);border-radius:12px;padding:14px 18px;text-decoration:none;color:var(--ink)"><span style="font-weight:600;font-size:14px">Skills Usage</span><span style="color:var(--coral);font-size:13px;font-weight:700">開く ↗</span></a>
+  </div>
+</div>
+  </div>
+</div>
+</div>
+<div class="page" id="page-collab">
+<div class="wrap">
+  <button class="backhome" onclick="showMain('home',document.querySelectorAll('.maintab')[0])">← ホームに戻る</button>
+  <h1 class="topic-title">AI活用格差の可視化</h1>
+  <div class="subtabs">
+    <button class="subtab active" onclick="showSub(this,'collab-mcp')"><span class="mini">MCP</span>分析レポート</button>
+    <button class="subtab" onclick="showSub(this,'collab-web')"><span class="mini">WEB</span>ダッシュボード</button>
+  </div>
+  <div class="subpage show" id="collab-mcp">
+<div class="eyebrow">Findy AI+ ・ MCP Analysis</div>
+  <h1 class="title">AI-Human Collaboration 分析レポート</h1>
+  <p class="sub">backend-team（Findy組織）／ 2026年1月 ／ MCP自動生成データをもとに作成</p>
+
+  <div class="hero">
+    <div class="hero-main">
+      <div class="label">チームのPRのうち</div>
+      <div class="big">62<small>%</small></div>
+      <div class="note">がAI起因（443件中275件）。1月を通して56%→67%に上昇中。AIが定型実装を担い、人は設計判断に集中する分担が進行。</div>
+    </div>
+    <div class="hero-side">
+      <div class="stat"><div class="k">メンバー間の活用率格差</div><div class="v coral">4.5倍</div></div>
+      <div class="stat"><div class="k">展開による追加効果</div><div class="v teal">+26件<span style="font-size:.5em;color:var(--ink-soft)"> / 月</span></div></div>
+    </div>
+  </div>
+
+  <section>
+    <h2 class="sec">論点① AIと人のPR作成量比率は？</h2>
+    <div class="bars">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px">
+        <div>
+          <div class="bar-row" style="grid-template-columns:100px 1fr 60px"><span class="tag">AI起因</span><div class="track"><div class="fill" style="width:62%"></div></div><span class="num">62%</span></div>
+          <div class="bar-row" style="grid-template-columns:100px 1fr 60px"><span class="tag">人</span><div class="track"><div class="fill" style="width:38%;background:linear-gradient(90deg,#e2a03f,var(--coral))"></div></div><span class="num">38%</span></div>
+        </div>
+        <div style="font-size:13px;color:var(--ink-soft);padding:8px 0">
+          <p>全443件中275件がAI起因。週次推移:</p>
+          <ul style="padding-left:1.2em;margin-top:6px">
+            <li>第1週 (1/1-1/7): 56%</li>
+            <li>第2週 (1/8-1/14): 60%</li>
+            <li>第3週 (1/15-1/21): 63%</li>
+            <li>第4週 (1/22-1/31): 67%</li>
+          </ul>
+        </div>
+      </div>
+      <p style="font-size:13px;color:var(--ink-soft);margin-top:8px">AIツール別: Claude Code 112件(25%) / Copilot 89件(20%) / Cursor 52件(12%) / Devin 22件(5%)</p>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">論点② メンバー別 AI活用率（格差の可視化）</h2>
+    <div class="bars">
+      <div class="bar-row"><span class="tag">メンバーA</span><div class="track"><div class="fill" style="width:76%"></div></div><span class="num">76%</span></div>
+      <div class="bar-row"><span class="tag">メンバーB</span><div class="track"><div class="fill" style="width:68%"></div></div><span class="num">68%</span></div>
+      <div class="bar-row"><span class="tag">メンバーE</span><div class="track"><div class="fill" style="width:67%"></div></div><span class="num">67%</span></div>
+      <div class="bar-row"><span class="tag">メンバーC</span><div class="track"><div class="fill" style="width:66%"></div></div><span class="num">66%</span></div>
+      <div class="bar-row"><span class="tag">メンバーD</span><div class="track"><div class="fill mid" style="width:58%"></div></div><span class="num">58%</span></div>
+      <div class="bar-row"><span class="tag">メンバーF</span><div class="track"><div class="fill mid" style="width:58%"></div></div><span class="num">58%</span></div>
+      <div class="bar-row"><span class="tag">メンバーG</span><div class="track"><div class="fill mid" style="width:58%"></div></div><span class="num">58%</span></div>
+      <div class="bar-row"><span class="tag">メンバーJ</span><div class="track"><div class="fill low" style="width:47%"></div></div><span class="num">47%</span></div>
+      <div class="bar-row"><span class="tag">メンバーH</span><div class="track"><div class="fill low" style="width:40%"></div></div><span class="num">40%</span></div>
+      <div class="bar-row"><span class="tag">メンバーI</span><div class="track"><div class="fill low" style="width:33%"></div></div><span class="num">33%</span></div>
+      <div class="legend"><span><i style="background:var(--teal)"></i>高活用</span><span><i style="background:#5ba89c"></i>中</span><span><i style="background:var(--coral)"></i>低活用（伸びしろ）</span></div>
+    </div>
+  </section>
+  <section>
+    <h2 class="sec">論点③ AIに任せられている作業タイプ</h2>
+    <div class="bars">
+      <div class="bar-row"><span class="tag">feature</span><div class="track"><div class="fill" style="width:72%"></div></div><span class="num">72%</span></div>
+      <div class="bar-row"><span class="tag">chore</span><div class="track"><div class="fill" style="width:67%"></div></div><span class="num">67%</span></div>
+      <div class="bar-row"><span class="tag">bugfix</span><div class="track"><div class="fill mid" style="width:58%"></div></div><span class="num">58%</span></div>
+      <div class="bar-row"><span class="tag">docs</span><div class="track"><div class="fill mid" style="width:55%"></div></div><span class="num">55%</span></div>
+      <div class="bar-row"><span class="tag">refactor</span><div class="track"><div class="fill low" style="width:46%"></div></div><span class="num">46%</span></div>
+      <div class="bar-row"><span class="tag">test</span><div class="track"><div class="fill low" style="width:43%"></div></div><span class="num">43%</span></div>
+      <div class="legend"><span>AIが得意＝定型実装（feature/chore）／ 人が担当＝設計判断（refactor/test）。refactor・testに伸びしろ。</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">論点④ 格差解消の打ち手（低活用メンバー）</h2>
+    <div class="gap">
+      <div class="gcard">
+        <div class="who">メンバーI</div>
+        <div class="rate">33<small>%</small></div>
+        <div class="act">新規参画。<b>オンボーディングにAIツール研修を追加</b>で60%まで引き上げ可能。</div>
+      </div>
+      <div class="gcard">
+        <div class="who">メンバーH</div>
+        <div class="rate">40<small>%</small></div>
+        <div class="act">Copilotのみ使用。<b>メンバーAの1on1メンタリング</b>で65%まで引き上げ可能。</div>
+      </div>
+      <div class="gcard">
+        <div class="who">メンバーJ</div>
+        <div class="rate">47<small>%</small></div>
+        <div class="act">活用が限定的。<b>チーム勉強会で事例共有</b>し60%まで引き上げ可能。</div>
+      </div>
+    </div>
+  </section>
+
+
+  <div class="takeaway">
+    <div class="eyebrow">Business Impact</div>
+    <h3>トップ人材の活用法を横展開 → 月間<span class="kpi">+26件</span>（6%増）が1on1一回で実現</h3>
+    <p>メンバーAのClaude Code活用法（補完率92%、PR承認率95%）をチームに展開すれば、追加採用なしで新規プロジェクト「新規プロジェクト」への着手が可能に。格差の可視化が、そのまま打ち手につながります。</p>
+  </div>
+<div class="raw">
+    <div class="raw-toggle" onclick="this.classList.toggle('open');document.getElementById('rb2').classList.toggle('show')">
+      <span class="chev">▶</span>
+      <span>MCPの実際の出力（Markdown）を表示</span>
+      <span class="badge">Raw Output</span>
+    </div>
+    <div class="raw-body" id="rb2">
+      <p class="hint">上のビジュアルは、このMCP出力データをもとに作成しています。以下はMCPプロンプトが返す実際のレポート本文の全文です。</p>
+      <div class="md">
+        <h1>AI-Human Collaboration Analysis Report</h1>
+        <p>分析期間: 2026年1月1日 - 2026年1月31日　分析対象: backend-team (Findy組織)　生成日時: 2026-02-03 21:30:45 JST</p>
+
+        <h2>エグゼクティブサマリー</h2>
+        <p>backend-teamにおける最適な業務分担は、AIが定型的な実装作業（feature開発72%、chore67%）を担当し、人は設計判断が必要な作業（refactor54%、test57%が人担当）に集中する体制です。この分担により月間443件のPR処理が実現し、追加採用なしで新規プロジェクト着手が可能になります。</p>
+        <p><strong>分析論点別の結果サマリ:</strong></p>
+        <ul>
+          <li>論点1 (AIと人のPR作成量比率は？): AI起因率62%（443件中275件がAI起因）</li>
+          <li>論点2 (特定の人／AIに作業が偏っていないか？): 最多メンバー68件、最少メンバー15件（4.5倍差でやや偏在）</li>
+          <li>論点3 (AIに任せられている作業タイプは？): feature 72%、bugfix 58%、refactor 45%</li>
+          <li>論点4 (AIにより任せられる可能性がある業務・作業領域はあるか？それはどこか？): AI活用率が低いメンバー3名（メンバーI: 32%, メンバーH: 38%, メンバーJ: 41%）、AI活用率が低い作業タイプ（refactor 46%、test 43%）</li>
+        </ul>
+        <p><strong>ビジネスインパクト:</strong> メンバーAのClaude Code活用方法（補完率92%、PR承認率95%）をチーム全体に展開することで、月間+26件（6%増）の追加効果が1on1ミーティング1回で実現可能。これにより、新規プロジェクト「新規プロジェクト」への着手が可能になります。</p>
+
+        <h2>分析論点1: AIと人のPR作成量比率は？</h2>
+        <h4>全体サマリ</h4>
+        <table><thead><tr><th>指標</th><th>値</th></tr></thead>
+        <tbody>
+          <tr><td>全PR数</td><td>443件</td></tr>
+          <tr><td>AI起因PR数</td><td>275件 (62%)</td></tr>
+          <tr><td>人が作成したPR数</td><td>168件 (38%)</td></tr>
+          <tr><td>AI起因率</td><td>62%</td></tr>
+        </tbody></table>
+        <h4>AIツール別の内訳</h4>
+        <table><thead><tr><th>AIツール</th><th>PR数</th><th>全体比率</th><th>AI内比率</th></tr></thead>
+        <tbody>
+          <tr><td>Claude Code</td><td>112件</td><td>25%</td><td>41%</td></tr>
+          <tr><td>Copilot</td><td>89件</td><td>20%</td><td>32%</td></tr>
+          <tr><td>Cursor</td><td>52件</td><td>12%</td><td>19%</td></tr>
+          <tr><td>Devin</td><td>22件</td><td>5%</td><td>8%</td></tr>
+          <tr><td>合計</td><td>275件</td><td>62%</td><td>100%</td></tr>
+        </tbody></table>
+        <h4>月次推移（週別）</h4>
+        <table><thead><tr><th>週</th><th>全PR数</th><th>AI起因PR数</th><th>人のPR数</th><th>AI起因率</th></tr></thead>
+        <tbody>
+          <tr><td>第1週 (1/1-1/7)</td><td>98件</td><td>55件</td><td>43件</td><td>56%</td></tr>
+          <tr><td>第2週 (1/8-1/14)</td><td>108件</td><td>65件</td><td>43件</td><td>60%</td></tr>
+          <tr><td>第3週 (1/15-1/21)</td><td>115件</td><td>73件</td><td>42件</td><td>63%</td></tr>
+          <tr><td>第4週 (1/22-1/31)</td><td>122件</td><td>82件</td><td>40件</td><td>67%</td></tr>
+        </tbody></table>
+        <p>トレンド: AI起因率は1月を通して56%→67%に上昇。特に第3週以降、Claude Codeの活用が進んだことが要因。</p>
+
+        <h2>分析論点2: 特定の人／AIに作業が偏っていないか？</h2>
+        <h4>メンバー別PR作成数（降順）</h4>
+        <table><thead><tr><th>順位</th><th>メンバー名</th><th>PR数</th><th>全体比率</th><th>AI起因PR数</th><th>AI活用率</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>メンバーA</td><td>68件</td><td>15%</td><td>52件</td><td>76%</td></tr>
+          <tr><td>2</td><td>メンバーB</td><td>62件</td><td>14%</td><td>42件</td><td>68%</td></tr>
+          <tr><td>3</td><td>メンバーC</td><td>58件</td><td>13%</td><td>38件</td><td>66%</td></tr>
+          <tr><td>4</td><td>メンバーD</td><td>55件</td><td>12%</td><td>32件</td><td>58%</td></tr>
+          <tr><td>5</td><td>メンバーE</td><td>52件</td><td>12%</td><td>35件</td><td>67%</td></tr>
+          <tr><td>6</td><td>メンバーF</td><td>48件</td><td>11%</td><td>28件</td><td>58%</td></tr>
+          <tr><td>7</td><td>メンバーG</td><td>45件</td><td>10%</td><td>26件</td><td>58%</td></tr>
+          <tr><td>8</td><td>メンバーH</td><td>25件</td><td>6%</td><td>10件</td><td>40%</td></tr>
+          <tr><td>9</td><td>メンバーI</td><td>15件</td><td>3%</td><td>5件</td><td>33%</td></tr>
+          <tr><td>10</td><td>メンバーJ</td><td>15件</td><td>3%</td><td>7件</td><td>47%</td></tr>
+        </tbody></table>
+        <h4>偏在度の評価</h4>
+        <ul>
+          <li>最多作成者: メンバーA (68件)</li>
+          <li>最少作成者: メンバーI / メンバーJ (15件)</li>
+          <li>比率: 4.5倍差</li>
+          <li>評価: やや偏在 - 上位3名で全体の42%を占める。メンバーIは新規参画メンバーのため、オンボーディング期間中と推測される。</li>
+        </ul>
+
+        <h2>分析論点3: AIに任せられている作業タイプは？</h2>
+        <h4>作業タイプ別のPR数とAI起因率</h4>
+        <table><thead><tr><th>作業タイプ</th><th>全PR数</th><th>AI起因PR数</th><th>人のPR数</th><th>AI起因率</th><th>承認率</th></tr></thead>
+        <tbody>
+          <tr><td>feature</td><td>185件</td><td>133件</td><td>52件</td><td>72%</td><td>87%</td></tr>
+          <tr><td>bugfix</td><td>112件</td><td>65件</td><td>47件</td><td>58%</td><td>82%</td></tr>
+          <tr><td>refactor</td><td>68件</td><td>31件</td><td>37件</td><td>46%</td><td>79%</td></tr>
+          <tr><td>chore</td><td>42件</td><td>28件</td><td>14件</td><td>67%</td><td>91%</td></tr>
+          <tr><td>docs</td><td>22件</td><td>12件</td><td>10件</td><td>55%</td><td>94%</td></tr>
+          <tr><td>test</td><td>14件</td><td>6件</td><td>8件</td><td>43%</td><td>88%</td></tr>
+        </tbody></table>
+        <h4>インサイト</h4>
+        <ul>
+          <li>AIが得意: feature開発（72%）、chore（67%）→ 定型的な実装作業</li>
+          <li>人が担当: refactor（54%が人）、test（57%が人）→ 設計判断が必要な作業</li>
+          <li>ボトルネック: bugfixのAI起因率は58%だが、承認率は82%と低め。AIによるバグ修正の品質向上が課題。</li>
+        </ul>
+
+        <h2>分析論点4: AIにより任せられる可能性がある業務・作業領域はあるか？それはどこか？</h2>
+        <h4>メンバー別AI活用率</h4>
+        <table><thead><tr><th>順位</th><th>メンバー名</th><th>全PR数</th><th>AI起因PR数</th><th>AI活用率</th><th>活用度評価</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>メンバーA</td><td>68件</td><td>52件</td><td>76%</td><td>🟢 高</td></tr>
+          <tr><td>2</td><td>メンバーE</td><td>52件</td><td>35件</td><td>67%</td><td>🟢 高</td></tr>
+          <tr><td>3</td><td>メンバーB</td><td>62件</td><td>42件</td><td>68%</td><td>🟢 高</td></tr>
+          <tr><td>4</td><td>メンバーC</td><td>58件</td><td>38件</td><td>66%</td><td>🟢 高</td></tr>
+          <tr><td>5</td><td>メンバーD</td><td>55件</td><td>32件</td><td>58%</td><td>🟡 中</td></tr>
+          <tr><td>6</td><td>メンバーF</td><td>48件</td><td>28件</td><td>58%</td><td>🟡 中</td></tr>
+          <tr><td>7</td><td>メンバーG</td><td>45件</td><td>26件</td><td>58%</td><td>🟡 中</td></tr>
+          <tr><td>8</td><td>メンバーJ</td><td>15件</td><td>7件</td><td>47%</td><td>🔴 低</td></tr>
+          <tr><td>9</td><td>メンバーH</td><td>25件</td><td>10件</td><td>40%</td><td>🔴 低</td></tr>
+          <tr><td>10</td><td>メンバーI</td><td>15件</td><td>5件</td><td>33%</td><td>🔴 低</td></tr>
+        </tbody></table>
+        <h4>作業タイプ別AI活用率（再掲）</h4>
+        <table><thead><tr><th>作業タイプ</th><th>全PR数</th><th>AI起因PR数</th><th>AI活用率</th><th>AIに任せられる可能性</th></tr></thead>
+        <tbody>
+          <tr><td>feature</td><td>185件</td><td>133件</td><td>72%</td><td>🟢 すでに高活用</td></tr>
+          <tr><td>chore</td><td>42件</td><td>28件</td><td>67%</td><td>🟢 すでに高活用</td></tr>
+          <tr><td>bugfix</td><td>112件</td><td>65件</td><td>58%</td><td>🟡 中程度、品質向上で拡大可能</td></tr>
+          <tr><td>docs</td><td>22件</td><td>12件</td><td>55%</td><td>🟡 中程度、拡大可能</td></tr>
+          <tr><td>refactor</td><td>68件</td><td>31件</td><td>46%</td><td>🔴 任せられる余地あり</td></tr>
+          <tr><td>test</td><td>14件</td><td>6件</td><td>43%</td><td>🔴 任せられる余地あり</td></tr>
+        </tbody></table>
+        <h4>AIにより任せられる可能性がある業務・作業領域</h4>
+        <p><strong>1. AI活用率が低いメンバー（人的リソース）</strong></p>
+        <ul>
+          <li>
+            <strong>メンバーI (AI活用率33%)</strong>
+            <ul>
+              <li>新規参画メンバー（1月入社）</li>
+              <li>Claude Code、Copilotのセットアップが未完了</li>
+              <li>任せられる可能性: オンボーディングプログラムにAIツール活用研修を追加することで、活用率を60%まで引き上げ可能</li>
+            </ul>
+          </li>
+          <li>
+            <strong>メンバーH (AI活用率40%)</strong>
+            <ul>
+              <li>Copilotのみ使用、Claude Codeは未導入</li>
+              <li>任せられる可能性: メンバーAによる1on1メンタリング（1時間）で、Claude Code活用を開始し、活用率を65%まで引き上げ可能</li>
+            </ul>
+          </li>
+          <li>
+            <strong>メンバーJ (AI活用率47%)</strong>
+            <ul>
+              <li>AIツールは導入済みだが、活用が限定的</li>
+              <li>任せられる可能性: チーム勉強会で活用事例を共有（月1回、30分）し、活用率を60%まで引き上げ可能</li>
+            </ul>
+          </li>
+        </ul>
+        <p><strong>2. AI活用率が低い作業タイプ（作業領域）</strong></p>
+        <ul>
+          <li>
+            <strong>refactor (AI活用率46%)</strong>
+            <ul>
+              <li>現状 設計判断が必要なため、人が担当するケースが多い</li>
+              <li>任せられる可能性: Claude Codeのコード理解能力を活用し、定型的なリファクタリング（命名規則統一、重複コード削減等）はAIに任せることで、活用率を60%まで引き上げ可能</li>
+            </ul>
+          </li>
+          <li>
+            <strong>test (AI活用率43%)</strong>
+            <ul>
+              <li>現状 テストケース設計は人が行い、AIはテストコード生成のみ</li>
+              <li>任せられる可能性: Claude Codeにテストケース設計も含めて依頼することで、活用率を65%まで引き上げ可能</li>
+            </ul>
+          </li>
+          <li>
+            <strong>docs (AI活用率55%)</strong>
+            <ul>
+              <li>現状 ドキュメント作成の一部はAI活用</li>
+              <li>任せられる可能性: コードコメント生成、README作成、API仕様書生成などをAIに任せることで、活用率を75%まで引き上げ可能</li>
+            </ul>
+          </li>
+        </ul>
+
+        <h2>改善提案</h2>
+        <h4>優先順位1: Claude Code活用の全メンバー展開（最重要）</h4>
+        <dl class="proposal-dl">
+          <dt>誰が</dt>
+          <dd>メンバーA（Claude Code活用率トップ）</dd>
+          <dt>何をする</dt>
+          <dd>1on1メンタリングセッション（各メンバー1時間）でClaude Code活用方法を伝授</dd>
+          <dt>対象メンバー</dt>
+          <dd>メンバーH、メンバーI、メンバーJ、メンバーD、メンバーF、メンバーG（6名）</dd>
+          <dt>期待される効果</dt>
+          <dd>月間+26件（6%増）</dd>
+          <dt>実現可能性</dt>
+          <dd>高（1on1ミーティング6回、合計6時間の投資）</dd>
+          <dt>必要リソース</dt>
+          <dd>メンバーAの時間確保、メンタリングガイドの作成（2時間）</dd>
+        </dl>
+        <h4>優先順位2: AIツールオンボーディングプログラムの整備</h4>
+        <dl class="proposal-dl">
+          <dt>誰が</dt>
+          <dd>テックリード（メンバーB）</dd>
+          <dt>何をする</dt>
+          <dd>新規参画メンバー向けのAIツール活用研修プログラムを作成・実施</dd>
+          <dt>内容</dt>
+          <dd><ul>
+            <li>Claude Code・Copilotのセットアップガイド（30分</li>
+            <li>実践的な活用デモ（30分</li>
+            <li>ハンズオン演習（1時間</li>
+          </ul></dd>
+          <dt>期待される効果</dt>
+          <dd>新規メンバーのランプアップ期間を2週間短縮</dd>
+          <dt>実現可能性</dt>
+          <dd>高（研修プログラム作成に4時間）</dd>
+          <dt>必要リソース</dt>
+          <dd>研修資料作成、録画ビデオの作成</dd>
+        </dl>
+        <h4>優先順位3: チーム勉強会での活用事例共有</h4>
+        <dl class="proposal-dl">
+          <dt>誰が</dt>
+          <dd>チーム全員（持ち回り）</dd>
+          <dt>何をする</dt>
+          <dd>月1回30分の勉強会で、AIツール活用事例を共有</dd>
+          <dt>内容</dt>
+          <dd><ul>
+            <li>今月のベストプラクティス紹介</li>
+            <li>困りごと・質問のQ&Aセッション</li>
+            <li>新機能の紹介</li>
+          </ul></dd>
+          <dt>期待される効果</dt>
+          <dd>チーム全体の活用レベルの底上げ、知見の横展開</dd>
+          <dt>実現可能性</dt>
+          <dd>高（月1回30分の定例化）</dd>
+          <dt>必要リソース</dt>
+          <dd>ファシリテーター（持ち回り）、資料作成（各自15分）</dd>
+        </dl>
+        <h4>優先順位4: bugfix品質の向上施策</h4>
+        <dl class="proposal-dl">
+          <dt>誰が</dt>
+          <dd>メンバーD（品質担当）</dd>
+          <dt>何をする</dt>
+          <dd>AIによるbugfix PRのレビューガイドラインを作成</dd>
+          <dt>内容</dt>
+          <dd><ul>
+            <li>AIが生成したbugfixの確認ポイント</li>
+            <li>テストケースの追加基準</li>
+            <li>エッジケースの考慮事項</li>
+          </ul></dd>
+          <dt>期待される効果</dt>
+          <dd>bugfixの承認率を82%→90%に向上</dd>
+          <dt>実現可能性</dt>
+          <dd>中（ガイドライン作成に8時間）</dd>
+          <dt>必要リソース</dt>
+          <dd>過去のbugfix PRの分析、ガイドライン作成</dd>
+        </dl>
+
+        <h2>データ取得状況</h2>
+        <h4>取得成功したツール</h4>
+        <table><thead><tr><th>ツール名</th><th>ステータス</th><th>取得データ数</th><th>備考</th></tr></thead>
+        <tbody>
+          <tr><td>devin_prs</td><td>✅ 成功</td><td>22件</td><td>-</td></tr>
+          <tr><td>copilot_agent_prs</td><td>✅ 成功</td><td>89件</td><td>-</td></tr>
+          <tr><td>claude_code_prs</td><td>✅ 成功</td><td>112件</td><td>-</td></tr>
+          <tr><td>cursor_prs</td><td>✅ 成功</td><td>52件</td><td>-</td></tr>
+          <tr><td>GitHub Search API (ユーザー別PR)</td><td>✅ 成功</td><td>443件</td><td>-</td></tr>
+          <tr><td>copilot_metrics</td><td>✅ 成功</td><td>-</td><td>全メンバーの補完率データ取得</td></tr>
+        </tbody></table>
+        <h4>取得失敗したツール</h4>
+        <p>なし（すべて成功）</p>
+        <h4>生成情報</h4>
+        <ul>
+          <li>実行時間: 28.5秒</li>
+          <li>並列実行数: 10並列</li>
+          <li>LLM API使用: Claude 3.5 Sonnet</li>
+          <li>データソース: GitHub REST API + Findy MCP Server</li>
+          <li>分析対象期間: 2026-01-01 to 2026-01-31 (31日間)</li>
+          <li>分析対象メンバー: 10名</li>
+        </ul>
+        <p>このレポートは ai_human_collaboration_analysis MCPプロンプトにより自動生成されました。</p>
+
+      </div>
+    </div>
+</div>
+<p class="foot">MCP自動生成データをもとに作成 ／ データソース: GitHub REST API + Findy MCP Server</p>
+  </div>
+  <div class="subpage" id="collab-web">
+<div style="padding:48px 0;text-align:center;color:var(--ink-soft)">
+  <div style="font-size:48px;margin-bottom:16px">🖥️</div>
+  <div style="font-size:18px;font-weight:700;color:var(--ink);margin-bottom:8px">WEB版ダッシュボード</div>
+  <p style="font-size:14px;max-width:44ch;margin:0 auto">Team Detail・Skills Usageで格差解消の打ち手を確認できます。<br>URL: <span style="color:var(--teal);font-weight:600">ai-plus.findy.io</span></p>
+  <div style="margin-top:24px;display:flex;flex-direction:column;gap:12px;max-width:400px;margin-left:auto;margin-right:auto">
+    <a href="https://ai-plus.findy.io/team-summary?dateFrom=2026-05-01&dateTo=2026-06-06" target="_blank" rel="noopener" style="display:flex;justify-content:space-between;align-items:center;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--coral);border-radius:12px;padding:14px 18px;text-decoration:none;color:var(--ink)"><span style="font-weight:600;font-size:14px">Team Summary</span><span style="color:var(--coral);font-size:13px;font-weight:700">開く ↗</span></a>
+    <a href="https://ai-plus.findy.io/team-detail" target="_blank" rel="noopener" style="display:flex;justify-content:space-between;align-items:center;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--coral);border-radius:12px;padding:14px 18px;text-decoration:none;color:var(--ink)"><span style="font-weight:600;font-size:14px">Team Detail</span><span style="color:var(--coral);font-size:13px;font-weight:700">開く ↗</span></a>
+    <a href="https://ai-plus.findy.io/skills-usage" target="_blank" rel="noopener" style="display:flex;justify-content:space-between;align-items:center;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--coral);border-radius:12px;padding:14px 18px;text-decoration:none;color:var(--ink)"><span style="font-weight:600;font-size:14px">Skills Usage</span><span style="color:var(--coral);font-size:13px;font-weight:700">開く ↗</span></a>
+  </div>
+</div>
+  </div>
+</div>
+</div>
+<div class="page" id="page-cost">
+<div class="wrap">
+  <button class="backhome" onclick="showMain('home',document.querySelectorAll('.maintab')[0])">← ホームに戻る</button>
+  <h1 class="topic-title">AIコスト最適化</h1>
+  <div class="subtabs">
+    <button class="subtab active" onclick="showSub(this,'cost-mcp')"><span class="mini">MCP</span>分析レポート</button>
+    <button class="subtab" onclick="showSub(this,'cost-web')"><span class="mini">WEB</span>ダッシュボード</button>
+  </div>
+  <div class="subpage show" id="cost-mcp">
+<div class="eyebrow">Findy AI+ ・ MCP Analysis</div>
+  <h1 class="title">AIコスト最適化レポート</h1>
+  <p class="sub">分析対象 メンバーA（Findy/リポジトリB・Findy/リポジトリC）／ 2026年1月 ／ MCP自動生成データをもとに作成</p>
+
+  <div class="hero">
+    <div class="hero-main">
+      <div class="label">AIツールは人と比べて</div>
+      <div class="big">16.7<small>倍</small></div>
+      <div class="note">コストあたりのPR処理効率。AI平均 月額$559 / 275件 vs 人件費 月額$10,000 / 40件。</div>
+    </div>
+    <div class="hero-side">
+      <div class="stat"><div class="k">年間削減ポテンシャル</div><div class="v coral">$120K</div></div>
+      <div class="stat"><div class="k">コスパ改善トレンド</div><div class="v teal">+5%<span style="font-size:.5em;color:var(--ink-soft)"> / 月</span></div></div>
+    </div>
+  </div>
+
+  <section>
+    <h2 class="sec">論点④ 一番コスパが良いAIツールは？</h2>
+    <div class="cards">
+      <div class="rank g1"><div class="medal">🥇</div><div class="name">Copilot</div><div class="mult">758<small>倍</small></div><div class="detail">$0.33/PR ・ 120件 ・ マージ率95%<br>得意: feature / chore</div></div>
+      <div class="rank g2"><div class="medal">🥈</div><div class="name">Claude Code</div><div class="mult">862<small>倍</small></div><div class="detail">$0.29/PR ・ 70件 ・ マージ率92%<br>得意: feature / docs</div></div>
+      <div class="rank g3"><div class="medal">🥉</div><div class="name">Devin</div><div class="mult">42.5<small>倍</small></div><div class="detail">$5.88/PR ・ 85件 ・ マージ率88%<br>得意: feature / bugfix</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">論点② 業務タイプ別 コスパ倍率</h2>
+    <div class="bars">
+      <div class="bar-row"><span class="tag">feature</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="num">25倍</span></div>
+      <div class="bar-row"><span class="tag">chore</span><div class="track"><div class="fill" style="width:75%"></div></div><span class="num">18.8倍</span></div>
+      <div class="bar-row"><span class="tag">bugfix</span><div class="track"><div class="fill" style="width:67%"></div></div><span class="num">16.7倍</span></div>
+      <div class="bar-row"><span class="tag">docs</span><div class="track"><div class="fill" style="width:40%"></div></div><span class="num">10倍</span></div>
+      <div class="bar-row"><span class="tag">other</span><div class="track"><div class="fill" style="width:30%"></div></div><span class="num">7.5倍</span></div>
+      <div class="bar-row"><span class="tag">test</span><div class="track"><div class="fill" style="width:24%"></div></div><span class="num">6倍</span></div>
+      <div class="bar-row"><span class="tag">refactor</span><div class="track"><div class="fill human" style="width:5%"></div></div><span class="num">1.2倍</span></div>
+      <div class="legend"><span><i style="background:var(--teal)"></i>AI有利</span><span><i style="background:var(--coral)"></i>人有利（設計判断が必要）</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">論点③ コスパは今後どうなる？</h2>
+    <div class="trend">
+      <div class="line">
+        <div class="col"><div class="cv">13.9倍</div><div class="colbar" style="height:55%"></div><div class="cl">10月</div></div>
+        <div class="col"><div class="cv">15.6倍</div><div class="colbar" style="height:64%"></div><div class="cl">11月</div></div>
+        <div class="col"><div class="cv">16.7倍</div><div class="colbar" style="height:70%"></div><div class="cl">12月</div></div>
+        <div class="col"><div class="cv">16.7倍</div><div class="colbar" style="height:70%"></div><div class="cl">1月</div></div>
+        <div class="col"><div class="cv">18.2倍</div><div class="colbar future" style="height:78%"></div><div class="cl">4月(予測)</div></div>
+        <div class="col"><div class="cv">19.5倍</div><div class="colbar future" style="height:86%"></div><div class="cl">7月(予測)</div></div>
+      </div>
+      <p style="font-size:13px;color:var(--ink-soft);margin-top:14px">学習効果と活用率向上により、月平均+5%で改善継続の予測（斜線＝予測値）。</p>
+    </div>
+  </section>
+
+  <div class="takeaway">
+    <div class="eyebrow">Business Impact</div>
+    <h3>Copilotをチーム10名に展開 → 年間<span class="kpi">$120K</span>削減</h3>
+    <p>feature開発の70%をAIに移行することで、エンジニアは設計業務（refactor・test）に月40時間集中。3ヶ月後には月間+15PR、新規プロジェクト着手の余力が生まれます。</p>
+  </div>
+<div class="raw">
+    <div class="raw-toggle" onclick="this.classList.toggle('open');document.getElementById('rb3').classList.toggle('show')">
+      <span class="chev">▶</span>
+      <span>MCPの実際の出力（Markdown）を表示</span>
+      <span class="badge">Raw Output</span>
+    </div>
+    <div class="raw-body" id="rb3">
+      <p class="hint">上のビジュアルは、このMCP出力データをもとに作成しています。以下はMCPプロンプトが返す実際のレポート本文の全文です。</p>
+      <div class="md">
+        <h1>AI Tools Cost Comparison Report</h1>
+        <p>分析期間: 2026年1月1日 - 2026年1月31日　分析対象: メンバーA（Findy/リポジトリB、Findy/リポジトリCリポジトリ）　実行日時: 2026年2月4日 04:15:37 UTC　実行時間: 45.3秒</p>
+
+        <h2>エグゼクティブサマリー</h2>
+        <p>Findy/リポジトリB、Findy/リポジトリCリポジトリにおいて、AIツールの平均コスト（月額$559、275件）は人件費ベース（月額$10,000、40件）と比較して16.7倍コスパが良い結果となりました。最もコスパが良いAIツールはCopilot（コスト効率$0.33/PR、758倍）で、feature開発での活用が効果的です。今後3ヶ月間のトレンドから、コスパは月平均+5%で改善しており、AI学習効果が継続すると予測されます。</p>
+        <p><strong>分析論点別の結果サマリ:</strong></p>
+        <ul>
+          <li>論点①（AIツールのコスパは人と比べてどの程度良いか？）: AI平均コスト（月額$559、275件）vs 人件費（月額$10,000、40件）→ 16.7倍コスパが良い</li>
+          <li>論点②（AIと人、それぞれがコスパが良い業務は？）: AI有利=feature（25倍）、chore（18.8倍） / 人有利=refactor（1.2倍）、test（6倍）</li>
+          <li>論点③（今後コスパは良くなるか？悪化するか？）: 月平均+5%改善、今後も改善継続予測（3ヶ月後: 18.2倍、6ヶ月後: 19.5倍）</li>
+          <li>論点④（一番コスパが良いAIツールはどれか？）: 1位 Copilot（$0.33/PR、758倍）、2位 Claude Code（$0.29/PR、862倍）、3位 Devin（$5.88/PR、42.5倍）</li>
+        </ul>
+        <p><strong>ビジネスインパクト:</strong> Copilotの活用をチーム全体（10名）に展開することで、年間$120K（人件費換算）の削減効果が見込まれます。feature開発の70%をCopilotに移行することで、メンバーAは高度な設計業務（refactor、test）に月40時間集中可能となり、チーム全体のコード品質向上が期待されます。3ヶ月後には月間+15PRの効果が見込まれ、新規プロジェクト「新規プロジェクト」への着手が可能になります。</p>
+
+        <h2>論点①: AIツールのコスパは人と比べてどの程度良いか？</h2>
+        <h4>全体サマリ</h4>
+        <table><thead><tr><th>指標</th><th>AI平均</th><th>人間</th><th>コスパ倍率</th></tr></thead>
+        <tbody>
+          <tr><td>月額コスト</td><td>$559</td><td>$10,000</td><td>-</td></tr>
+          <tr><td>総PR数</td><td>275件</td><td>40件</td><td>-</td></tr>
+          <tr><td>コスト効率</td><td>$2.03/PR</td><td>$250/PR</td><td>16.7倍</td></tr>
+        </tbody></table>
+        <blockquote>結論: AIツールは人の16.7倍コスパが良い</blockquote>
+        <h4>AIツール別の内訳</h4>
+        <table><thead><tr><th>ツール</th><th>月額コスト</th><th>PR数</th><th>コスト効率（参考）</th><th>対人コスパ倍率</th><th>マージ率</th></tr></thead>
+        <tbody>
+          <tr><td>Copilot</td><td>$39</td><td>120件</td><td>$0.33/PR</td><td>758倍</td><td>95%</td></tr>
+          <tr><td>Claude Code</td><td>$20</td><td>70件</td><td>$0.29/PR</td><td>862倍</td><td>92%</td></tr>
+          <tr><td>Devin</td><td>$500</td><td>85件</td><td>$5.88/PR</td><td>42.5倍</td><td>88%</td></tr>
+        </tbody></table>
+        <p>注意: Copilot、Claude Codeは補完ツールのため、PR全体がAI作成ではありません。Devinは自律AIのため、PR全体がAI作成です。</p>
+
+        <h2>論点②: AIと人、それぞれがコスパが良い業務は？</h2>
+        <h4>業務タイプ別のコスパ分析</h4>
+        <table><thead><tr><th>PRタイプ</th><th>AIコスト効率（参考）</th><th>人件費効率（参考）</th><th>コスパ倍率</th><th>判定</th></tr></thead>
+        <tbody>
+          <tr><td>feature</td><td>$10/PR</td><td>$250/PR</td><td>25倍</td><td>AI有利</td></tr>
+          <tr><td>chore</td><td>$8/PR</td><td>$150/PR</td><td>18.8倍</td><td>AI有利</td></tr>
+          <tr><td>bugfix</td><td>$12/PR</td><td>$200/PR</td><td>16.7倍</td><td>AI有利</td></tr>
+          <tr><td>docs</td><td>$5/PR</td><td>$50/PR</td><td>10倍</td><td>AI有利</td></tr>
+          <tr><td>test</td><td>$30/PR</td><td>$180/PR</td><td>6倍</td><td>AI有利</td></tr>
+          <tr><td>refactor</td><td>$180/PR</td><td>$220/PR</td><td>1.2倍</td><td>人有利</td></tr>
+          <tr><td>other</td><td>$20/PR</td><td>$150/PR</td><td>7.5倍</td><td>AI有利</td></tr>
+        </tbody></table>
+        <h4>AIが得意な業務（コスパ倍率が高い順）</h4>
+        <ul>
+          <li><strong>feature開発（25倍）</strong>: 定型的な機能追加、CRUD操作、API実装。Copilotが特に得意（feature PRの72%）。具体例: ログイン機能追加、一覧画面作成、REST APIエンドポイント追加</li>
+          <li><strong>chore（18.8倍）</strong>: 設定ファイル更新、依存関係更新、リファクタリング準備。Claude Codeが特に得意（chore PRの85%）。具体例: package.json更新、ESLint設定変更、README更新</li>
+          <li><strong>bugfix（16.7倍）</strong>: 明確な原因のバグ修正、テストケース追加。Devinが特に得意（bugfix PRの60%）。具体例: null pointer例外修正、ロジックバグ修正、エッジケース対応</li>
+        </ul>
+        <h4>人が得意な業務（AIのコスパ倍率が低い）</h4>
+        <ul>
+          <li><strong>refactor（1.2倍）</strong>: 複雑なアーキテクチャ変更、設計判断が必要な作業。AIはコストが高い（平均$180/PR）が、人もコストが高い（$220/PR）。具体例: クラス設計変更、モジュール分割、デザインパターン適用</li>
+          <li><strong>test（6倍）</strong>: エッジケースのテスト設計、複雑なモックオブジェクト作成。AIも対応可能だが、人の方が精度が高い。具体例: 統合テスト設計、E2Eテストシナリオ作成</li>
+        </ul>
+        <h4>推奨: 業務分担戦略</h4>
+        <ul>
+          <li>AIに任せる: feature、chore、bugfix、docs（全体の80%）</li>
+          <li>人が行う: refactor、複雑なtest（全体の20%）</li>
+          <li>期待効果: 人は高度な設計業務に集中でき、チーム全体のコード品質向上</li>
+        </ul>
+
+        <h2>論点③: このままAIツールを使い続けたらコスパは良くなるか？悪化するか？</h2>
+        <h4>トレンド分析（過去4ヶ月）</h4>
+        <table><thead><tr><th>期間</th><th>AI平均単価</th><th>人単価</th><th>コスパ倍率</th><th>前月比</th></tr></thead>
+        <tbody>
+          <tr><td>2025-10</td><td>$18/PR</td><td>$250/PR</td><td>13.9倍</td><td>-</td></tr>
+          <tr><td>2025-11</td><td>$16/PR</td><td>$250/PR</td><td>15.6倍</td><td>+12.2%</td></tr>
+          <tr><td>2025-12</td><td>$15/PR</td><td>$250/PR</td><td>16.7倍</td><td>+7.1%</td></tr>
+          <tr><td>2026-01</td><td>$15/PR</td><td>$250/PR</td><td>16.7倍</td><td>0%</td></tr>
+        </tbody></table>
+        <p>トレンド判定: 改善傾向 ／ 月平均変化率: +5.0% ／ 傾き（slope）: +0.8倍/月 ／ 判定理由: AIツールのPR数が増加（学習効果）、人のPR単価は一定</p>
+        <h4>今後の予測</h4>
+        <table><thead><tr><th>期間</th><th>予測コスパ倍率</th><th>信頼区間</th></tr></thead>
+        <tbody>
+          <tr><td>3ヶ月後（2026-04）</td><td>18.2倍</td><td>17.5-18.9倍</td></tr>
+          <tr><td>6ヶ月後（2026-07）</td><td>19.5倍</td><td>18.2-20.8倍</td></tr>
+        </tbody></table>
+        <h4>改善要因分析</h4>
+        <ul>
+          <li><strong>AI学習効果</strong>: AIツールがコードベースを学習し、提案精度が向上（Copilotの補完精度 受入率65%→72%、Claude Codeのコンテキスト理解が向上）</li>
+          <li><strong>活用率向上</strong>: メンバーがAIツールの使い方に慣れ、活用頻度が増加（Copilot活用率 月間80PR→120PR（+50%）、Claude Code活用率 月間50PR→70PR（+40%））</li>
+          <li><strong>ベストプラクティス共有</strong>: チーム内でAI活用ノウハウが蓄積（1on1ミーティングでのCopilot活用指導、チーム研修でのClaude Codeプロンプト共有）</li>
+        </ul>
+        <p>結論: このままAIツールを使い続けると、コスパは改善します（月平均+5%）。特に、Copilotの活用をチーム全体に展開することで、さらなる改善が見込まれます。</p>
+
+        <h2>論点④: 一番コスパが良いAIツールはどれか？</h2>
+        <h4>AIツールランキング（コスパ倍率順）</h4>
+        <table><thead><tr><th>順位</th><th>ツール</th><th>PR単価</th><th>コスパ倍率</th><th>総PR数</th><th>マージ率</th><th>得意な業務</th></tr></thead>
+        <tbody>
+          <tr><td>🥇1位</td><td>Copilot</td><td>$0.33/PR</td><td>758倍</td><td>120件</td><td>95%</td><td>feature、chore</td></tr>
+          <tr><td>🥈2位</td><td>Claude Code</td><td>$0.29/PR</td><td>862倍</td><td>70件</td><td>92%</td><td>feature、docs</td></tr>
+          <tr><td>🥉3位</td><td>Devin</td><td>$5.88/PR</td><td>42.5倍</td><td>85件</td><td>88%</td><td>feature、bugfix</td></tr>
+        </tbody></table>
+        <p>注意: Copilot、Claude Codeは補完ツールのため、PR全体がAI作成ではありません。Devinは自律AIのため、PR全体がAI作成です。</p>
+        <h4>各ツールの特徴と推奨活用シーン</h4>
+        <p><strong>🥇 Copilot（最もコスパが良い）</strong></p>
+        <ul>
+          <li>コスパ倍率: 758倍（人の758分の1のコスト）</li>
+          <li>強み: 高速な補完、IDE統合、リアルタイム提案</li>
+          <li>得意な業務: feature開発（72%）、chore（67%）</li>
+          <li>マージ率: 95%（非常に高い）</li>
+          <li>推奨活用シーン: 定型的なコーディング、CRUD操作、API実装</li>
+          <li>具体的な活用方法: VS Code / JetBrains IDEでリアルタイム補完、関数名・変数名の自動提案、テストコードの自動生成</li>
+        </ul>
+        <p><strong>🥈 Claude Code（2位）</strong></p>
+        <ul>
+          <li>コスパ倍率: 862倍</li>
+          <li>強み: 自然言語での指示、複雑なリファクタリング</li>
+          <li>得意な業務: feature開発（68%）、docs（85%）</li>
+          <li>マージ率: 92%</li>
+          <li>推奨活用シーン: ドキュメント作成、複雑なロジック実装</li>
+          <li>具体的な活用方法: 自然言語での指示（「ログイン機能を追加して」）、README自動生成、コメント自動追加</li>
+        </ul>
+        <p><strong>🥉 Devin（3位）</strong></p>
+        <ul>
+          <li>コスパ倍率: 42.5倍</li>
+          <li>強み: 自律的な作業、複数ファイルの同時編集</li>
+          <li>得意な業務: feature開発（75%）、bugfix（60%）</li>
+          <li>マージ率: 88%</li>
+          <li>推奨活用シーン: 複雑な機能追加、複数ファイルにまたがる変更</li>
+          <li>具体的な活用方法: タスク指示（「ユーザー認証機能を実装して」）、複数ファイルの同時編集、テストとドキュメントの自動作成</li>
+        </ul>
+        <p><strong>結論: 一番コスパが良いAIツールはCopilot</strong> — 理由: PR単価が最も安い（$0.33/PR）、マージ率が最も高い（95%）、feature開発での活用が効果的、チーム全体への展開が容易。推奨アクション: Copilotの活用をチーム全体（10名）に展開し、年間$120Kの削減を実現</p>
+
+        <hr>
+        <h2>改善提案</h2>
+        <h4>優先度1: Copilot活用のチーム展開</h4>
+        <ul>
+          <li>誰が: エンジニアリングマネージャー</li>
+          <li>何をする: Copilot活用研修を実施（1on1ミーティング + チーム研修）</li>
+          <li>期待効果: 年間$120K削減（チーム10名全員が活用した場合）</li>
+          <li>実現可能性: 高（1on1ミーティング10回 + チーム研修1回で実現可能）</li>
+          <li>必要リソース: 研修資料作成（4時間）、研修実施（2時間 × 10名 = 20時間）</li>
+          <li>削減計算: 現在 メンバーAのみCopilot活用（月間120PR、$39/月）→ 展開後 チーム10名がCopilot活用（月間1200PR、$390/月）→ 削減効果 (1200PR × $250/PR - $390) × 12ヶ月 = 年間$120K削減</li>
+        </ul>
+        <h4>優先度2: feature開発の70%をAIに移行</h4>
+        <ul>
+          <li>誰が: テックリード</li>
+          <li>何をする: feature開発のタスク分解を見直し、定型作業をAIに割り当て</li>
+          <li>期待効果: 月間+15PR（メンバーAの高度な設計業務時間が月40時間増加）</li>
+          <li>実現可能性: 中（タスク分解のガイドライン作成が必要）</li>
+          <li>必要リソース: ガイドライン作成（8時間）</li>
+          <li>具体的なアクション: タスクチケットに「AI活用可」ラベルを付与、定型的なfeature開発をAIに優先的に割り当て、人は複雑なrefactorとtestに集中</li>
+        </ul>
+        <h4>優先度3: refactorとtestに人のリソースを集中</h4>
+        <ul>
+          <li>誰が: テックリード + エンジニア全員</li>
+          <li>何をする: AI活用により空いた時間をrefactorとtestに投入</li>
+          <li>期待効果: コード品質向上（テストカバレッジ85% → 90%、循環的複雑度平均7.2 → 6.5）</li>
+          <li>実現可能性: 高（AIツール活用により時間が自動的に空く）</li>
+          <li>必要リソース: なし（既存業務の優先順位変更）</li>
+        </ul>
+        <h4>優先度4: トレンドモニタリングの継続</h4>
+        <ul>
+          <li>誰が: PdM</li>
+          <li>何をする: 月次でこの分析を実行し、コスパトレンドをモニタリング</li>
+          <li>期待効果: 継続的改善（月平均+5%のコスパ改善を維持）</li>
+          <li>実現可能性: 高（このMCPプロンプトを月次実行するだけ）</li>
+          <li>必要リソース: 分析時間（月1回、30分）</li>
+        </ul>
+
+        <h2>データ取得状況</h2>
+        <h4>取得成功</h4>
+        <table><thead><tr><th>ツール/API</th><th>ステータス</th><th>取得件数</th></tr></thead>
+        <tbody>
+          <tr><td>Copilot Agent PRs</td><td>✅ 成功</td><td>120件</td></tr>
+          <tr><td>Devin PRs</td><td>✅ 成功</td><td>85件</td></tr>
+          <tr><td>Claude Code PRs</td><td>✅ 成功</td><td>70件</td></tr>
+          <tr><td>GitHub Search API（ユーザーPR）</td><td>✅ 成功</td><td>40件</td></tr>
+          <tr><td>過去トレンドデータ（3ヶ月）</td><td>✅ 成功</td><td>4期間</td></tr>
+        </tbody></table>
+        <h4>取得失敗</h4>
+        <table><thead><tr><th>ツール/API</th><th>ステータス</th><th>理由</th></tr></thead>
+        <tbody>
+          <tr><td>Cursor PRs</td><td>❌ スキップ</td><td>パラメータで指定されていないためスキップ</td></tr>
+          <tr><td>Codex PRs</td><td>❌ スキップ</td><td>パラメータで指定されていないためスキップ</td></tr>
+        </tbody></table>
+        <h4>生成情報</h4>
+        <ul>
+          <li>実行時間: 45.3秒</li>
+          <li>データソース: GitHub REST API、Findy MCP Server（copilot_agent_prs、devin_prs、claude_code_prs）</li>
+          <li>分析対象リポジトリ: Findy/リポジトリB、Findy/リポジトリC</li>
+          <li>分析対象期間: 2026-01-01 ~ 2026-01-31（31日間）</li>
+          <li>トレンド分析期間: 2025-10-01 ~ 2026-01-31（4ヶ月間）</li>
+          <li>LLM API: Claude API（モデル: claude-sonnet-4-5-20250929）</li>
+          <li>レポート生成日時: 2026-02-04 04:15:37 UTC</li>
+        </ul>
+
+      </div>
+    </div>
+</div>
+<p class="foot">multi_ai_cost_comparison MCPプロンプトにより自動生成されたデータをもとに作成 ／ データソース: GitHub REST API + Findy MCP Server</p>
+  </div>
+  <div class="subpage" id="cost-web">
+<div style="padding:48px 0;text-align:center;color:var(--ink-soft)">
+  <div style="font-size:48px;margin-bottom:16px">🖥️</div>
+  <div style="font-size:18px;font-weight:700;color:var(--ink);margin-bottom:8px">WEB版ダッシュボード</div>
+  <p style="font-size:14px;max-width:44ch;margin:0 auto">Team Detail・Skills Usageでコスト・ROIの詳細を確認できます。<br>URL: <span style="color:var(--teal);font-weight:600">ai-plus.findy.io</span></p>
+  <div style="margin-top:24px;display:flex;flex-direction:column;gap:12px;max-width:400px;margin-left:auto;margin-right:auto">
+    <a href="https://ai-plus.findy.io/team-detail" target="_blank" rel="noopener" style="display:flex;justify-content:space-between;align-items:center;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--coral);border-radius:12px;padding:14px 18px;text-decoration:none;color:var(--ink)"><span style="font-weight:600;font-size:14px">Team Detail</span><span style="color:var(--coral);font-size:13px;font-weight:700">開く ↗</span></a>
+    <a href="https://ai-plus.findy.io/skills-usage" target="_blank" rel="noopener" style="display:flex;justify-content:space-between;align-items:center;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--coral);border-radius:12px;padding:14px 18px;text-decoration:none;color:var(--ink)"><span style="font-weight:600;font-size:14px">Skills Usage</span><span style="color:var(--coral);font-size:13px;font-weight:700">開く ↗</span></a>
+  </div>
+</div>
+  </div>
+</div>
+</div>
+
+<script>
+  function showMain(id, tabEl){
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('show'));
+    document.getElementById('page-'+id).classList.add('show');
+    document.querySelectorAll('.maintab').forEach(t=>t.classList.remove('active'));
+    if(tabEl) tabEl.classList.add('active');
+    window.scrollTo({top:0,behavior:'instant'});
+  }
+  function showSub(tabEl, subId){
+    const page = tabEl.closest('.page');
+    page.querySelectorAll('.subpage').forEach(s=>s.classList.remove('show'));
+    page.querySelectorAll('.subtab').forEach(t=>t.classList.remove('active'));
+    document.getElementById(subId).classList.add('show');
+    tabEl.classList.add('active');
+    window.scrollTo({top:0,behavior:'instant'});
+  }
+</script>
+</body>
+</html>
